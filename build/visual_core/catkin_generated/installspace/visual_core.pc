@@ -1,0 +1,8 @@
+prefix=/home/cardonixjr/cuscobot_mononav_ws/install
+
+Name: visual_core
+Description: Description of visual_core
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 

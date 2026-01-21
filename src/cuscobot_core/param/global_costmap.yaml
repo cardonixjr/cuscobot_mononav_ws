@@ -1,0 +1,14 @@
+global_costmap:
+  global_frame: map
+  robot_base_frame: base_link
+
+  update_frequency: 10.0
+  #publish_frequency: 10.0
+  #transform_tolerance: 0.5
+
+  static_map: true
+  #use_dijkstra: false
+  
+  cost_factor: 0.55
+  neutral_cost: 66
+  lethal_cost: 253

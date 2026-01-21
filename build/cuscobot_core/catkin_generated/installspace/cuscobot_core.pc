@@ -1,0 +1,8 @@
+prefix=/home/cardonixjr/cuscobot_mononav_ws/install
+
+Name: cuscobot_core
+Description: Description of cuscobot_core
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 

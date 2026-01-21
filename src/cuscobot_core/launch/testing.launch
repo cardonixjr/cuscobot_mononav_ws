@@ -1,0 +1,11 @@
+<?xml version="1.0" ?>
+
+<launch>
+
+	<arg name="model" />
+	<param name="use_gui" value="yes" />
+
+	<!-- Starting Teleop node -->
+	<node name="teleop_twist_keyboard" pkg="teleop_twist_keyboard" type="teleop_twist_keyboard.py" />
+
+</launch>

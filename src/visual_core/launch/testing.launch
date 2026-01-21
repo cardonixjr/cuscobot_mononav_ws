@@ -1,0 +1,31 @@
+<?xml version="1.0" ?>
+
+<launch>
+
+	<arg name="model" />
+	<param name="use_gui" value="yes" />
+
+	<!-- Parsing xacro and setting robot_description parameter -->
+	<param name="robot_description" command="xacro $(find cuscobot_mononav)/urdf/cuscobot.xacro" />
+
+	<!-- Start robot state publisher which will publish tf -->
+	<node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
+
+	<!-- Starting Teleop node -->
+	<node name="teleop_twist_keyboard" pkg="teleop_twist_keyboard" type="teleop_twist_keyboard.py" />
+
+	<!-- Starting Odometry and TF publisher node -->
+	<node pkg="cuscobot_mononav" type="deadReckoning.py" name="odom" output="screen"/>
+	
+	<!-- Starting Camera node -->
+	<!-- <include file="$(find cuscobot_mononav)/launch/camera.launch" /> -->
+
+	<!-- ROS Serial driver -->
+	<node name="serial_node"        pkg="rosserial_python"      type="serial_node.py">
+	<param name="port"              type="string"               value="/dev/ttyACM0"/>
+	<param name="baud"              type="int"                  value="57600"/>
+	</node>
+
+	<!-- RVIZ -->
+	<node name="rviz" pkg="rviz" type="rviz" args="-d $(find cuscobot_mononav)/urdf/config.rviz" required="true" />
+</launch>
