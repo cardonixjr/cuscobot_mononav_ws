@@ -4,22 +4,22 @@
   <master auto="start"/>
 
   <!-- Arguments -->
-  <arg name="map_file" default="$(find cuscobot)/maps/mapa260825.yaml"/>  
+  <arg name="map_file" default="$(find cuscobot_core)/maps/mapa260825.yaml"/>  
 
   <!-- Map server-->
   <node name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)" />
   
   <!-- Run AMCL-->
-  <include file="$(find cuscobot)/launch/amcl.launch" />
+  <include file="$(find cuscobot_core)/launch/amcl.launch" />
 
   <!-- Run move_base-->
   <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
-    <rosparam file="$(find cuscobot)/param/common_costmap.yaml" command="load" ns="global_costmap" />
-    <rosparam file="$(find cuscobot)/param/common_costmap.yaml" command="load" ns="local_costmap" />
-    <rosparam file="$(find cuscobot)/param/local_costmap.yaml" command="load" />
-    <rosparam file="$(find cuscobot)/param/global_costmap.yaml" command="load" />
-    <rosparam file="$(find cuscobot)/param/base_local_planner.yaml" command="load" />
-    <rosparam file="$(find cuscobot)/param/move_base.yaml" command="load" />
+    <rosparam file="$(find cuscobot_core)/param/common_costmap.yaml" command="load" ns="global_costmap" />
+    <rosparam file="$(find cuscobot_core)/param/common_costmap.yaml" command="load" ns="local_costmap" />
+    <rosparam file="$(find cuscobot_core)/param/local_costmap.yaml" command="load" />
+    <rosparam file="$(find cuscobot_core)/param/global_costmap.yaml" command="load" />
+    <rosparam file="$(find cuscobot_core)/param/base_local_planner.yaml" command="load" />
+    <rosparam file="$(find cuscobot_core)/param/move_base.yaml" command="load" />
   </node>
 
   <!-- rviz -->
@@ -27,7 +27,7 @@
     pkg="rviz" 
     type="rviz" 
     name="rviz" 
-    args="-d $(find cuscobot)/urdf/config.rviz"
+    args="-d $(find cuscobot_core)/urdf/config.rviz"
     required="true"    
 
     />

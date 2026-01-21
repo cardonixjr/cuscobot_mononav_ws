@@ -1,0 +1,7 @@
+numpy==1.24.4
+torch~=2.4.1
+matplotlib~=3.7.5
+ultralytics==8.4.0
+opencv-python~=4.13.0
+PyYAML>=4.2b1
+tqdm~=4.47.0

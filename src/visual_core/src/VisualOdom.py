@@ -7,7 +7,7 @@ import cv2
 
 import matplotlib.pyplot as plt
 
-from tqdm import tqdm
+# from tqdm import tqdm
 # from lib.visualization import plotting
 # from lib.visualization.video import play_trip
 

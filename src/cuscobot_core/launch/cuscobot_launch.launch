@@ -7,7 +7,7 @@
 	<param name="use_gui" value="yes" />
 
 	<!-- Parsing xacro and setting robot_description parameter -->
-	<param name="robot_description" command="xacro $(find cuscobot)/urdf/cuscobot.xacro" />
+	<param name="robot_description" command="xacro $(find cuscobot_core)/urdf/cuscobot.xacro" />
 
 	<!-- Start robot state publisher which will publish tf -->
 	<node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
@@ -16,7 +16,7 @@
 	<node pkg="cuscobot" type="deadReckoning.py" name="odom" output="screen"/>
 
 	<node pkg="usb_cam" type="usb_cam_node" name="usb_cam" output="screen">
-	    <param name="camera_info_url" value="file://$(find cuscobot_mononav)/param/camera.yaml" />
+	    <param name="camera_info_url" value="file://$(find cuscobot_core)/param/camera.yaml" />
             <param name="video_device" value="/dev/video0" />
             <param name="image_width"  value="640" />
             <param name="image_height" value="480" />

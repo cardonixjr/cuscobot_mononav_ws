@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 import logging
-from VO.utils.tools import plot_keypoints
+from tools import plot_keypoints
 
 
 class HandcraftDetector(object):
