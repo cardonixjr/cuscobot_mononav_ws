@@ -56,21 +56,6 @@ class VisualOdometryROS:
         img = self.bridge.imgmsg_to_cv2(msg, "bgr8")
         img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-        #input_img = cv2.equalizeHist(img_gray)  # Histogram Equalization
-
-        # clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))    # CLAHE Equalization
-        # input_img = clahe.apply(img_gray)
-
-        # lap = cv2.Laplacian(img_gray, cv2.CV_64F)                     # Laplacian Edge augmentation
-        # sharp = img_gray - 0.5 * lap
-        # input_img = np.clip(sharp, 0, 255).astype(np.uint8)
-
-        # input_img = cv2.normalize(img_gray, None, 0, 255, cv2.NORM_MINMAX)    # Normalize
-
-        # edges = cv2.Canny(img_gray, 50, 150)                            # Sobel multi-scale detection
-        # input_img = cv2.addWeighted(img_gray, 0.7, edges, 0.3, 0)
-
-
         input_img = img_gray
         kp, des = self.sift.detectAndCompute(input_img, None)
 
