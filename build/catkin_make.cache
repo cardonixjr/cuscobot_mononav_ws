@@ -1,2 +1,0 @@
-cuscobot_core:utils:visual_core
--DCATKIN_DEVEL_PREFIX=/home/cardonixjr/cuscobot_mononav_ws/devel -DCMAKE_INSTALL_PREFIX=/home/cardonixjr/cuscobot_mononav_ws/install -G Unix Makefiles
