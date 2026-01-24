@@ -8,10 +8,8 @@ from sensor_msgs.msg import Image, CameraInfo
 import matplotlib.pyplot as plt
 from cv_bridge import CvBridge
 
-from VO.loadData import load
-from VO.HandcraftDetector import HandcraftDetector
-from VO.FrameByFrameMatcher import FrameByFrameMatcher
 from VO.imageProcessing import *
+from VO.tools import plot_keypoints
 
 DEBUG = True
 PLOT = True
@@ -31,9 +29,12 @@ class VisualOdometry(object):
         self.camera_matrix = None
         self.dist_coeffs = None
 
-        # Define SIFT+FLANN architecture
-        self.detector = HandcraftDetector({"type": "SIFT"})
-        self.matcher = FrameByFrameMatcher({"type": "FLANN"})
+        self.detector = cv2.SIFT_create()
+
+        FLANN_INDEX_KDTREE = 1
+        index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
+        search_params = dict(checks=50)
+        self.matcher = cv2.FlannBasedMatcher(index_params, search_params)
 
         # AUX variables
         self.last_image = None
@@ -77,15 +78,28 @@ class VisualOdometry(object):
         # Aplica o pré-processamento de imagem
         input_img = self.image_processing(img)
 
-        # Aplica a detecção de keypoints
-        kp, des = self.matcher.detectAndCompute(input_img, None)
+        # kp_dict = self.detector(input_img)
 
-        if self.last_image is not None and len(self.wheel_odom) > 1:    # Verifica se não é o primeiro loop      
+        # kp = kp_dict["keypoints"]
+        # des = kp_dict["descriptors"]
+
+        # # Aplica a detecção de keypoints
+        kp, des = self.detector.detectAndCompute(input_img, None)
+
+        kpts = np.zeros((len(kp), 2))
+        scores = np.zeros((len(kp)))
+        for i, p in enumerate(kp):
+            kpts[i, 0] = p.pt[0]
+            kpts[i, 1] = p.pt[1]
+            scores[i] = p.response
+
+        if self.last_image is not None: # and len(self.wheel_odom) > 1:    # Verifica se não é o primeiro loop      
             # Faz o matching entre os keypoints do ultimo frame com o atual
             matches = self.matcher.knnMatch(self.last_des, des, k=2)
 
             # Separa apenas os matches considerados bons
             good = [m for m,n in matches if m.distance < 0.7*n.distance]
+        #     print(good)
 
             if len(good) > 8:
                 # Coleta os pontos bons do frame atual e do ultimo frame
@@ -95,6 +109,7 @@ class VisualOdometry(object):
                 # Encontra a matriz essencial
                 E, mask = cv2.findEssentialMat(pts2, pts1, self.camera_matrix, cv2.RANSAC, 0.999, 1.0)
                 
+                # print(E)
                 if E is not None:
 
                     # Recupera a pose do ultimo frame
@@ -110,31 +125,32 @@ class VisualOdometry(object):
                     self.vo_odom.append(p_vo.copy())
 
                     # Aplica a escala
-                    self.absolute_scale = self.get_scale(p_vo)
+                    self.absolute_scale = self.get_scale()
+                    # self.absolute_scale = 1.0
                     p_vo_scaled = p_vo * self.absolute_scale
                         
                     self.vo_scaled_odom.append(p_vo_scaled.copy())
 
 
-                    if PLOT:
-                        kp_img = cv2.drawKeypoints(img, kp, None, color=(0,255,0))
-                        cv2.imshow("Image", img)
-                        cv2.imshow("Processed Image", input_img)
-                        cv2.imshow("Keypoints", kp_img)
-                        cv2.waitKey(1)
+            if PLOT:
+                kp_img = plot_keypoints(img, kpts, scores/scores.max())
+                cv2.imshow("Processed Image", input_img)
+                cv2.imshow("Keypoints", kp_img)
+                cv2.waitKey(1)
 
         # Reseta variaveis
         self.last_image = input_img
         self.last_kp = kp
         self.last_des = des
 
-    def get_scale(self, pose):
-        d_vo = np.linalg.norm(self.vo_odom[-1] - self.vo_odom[-2])
-        d_odom = np.linalg.norm(self.wheel_odom[-1] - self.wheel_odom[-2])
-        if d_vo > 1e-6:
-            scale = d_odom / d_vo
-        else:
-            scale = 1.0
+    def get_scale(self):
+        scale = 1.0
+        if len(self.vo_odom) >1:
+            d_vo = np.linalg.norm(self.vo_odom[-1] - self.vo_odom[-2])
+            d_odom = np.linalg.norm(self.wheel_odom[-1] - self.wheel_odom[-2])
+            if d_vo > 1e-6:
+                scale = d_odom / d_vo
+            
 
         if DEBUG: print(f"scale: {scale}")
         return scale

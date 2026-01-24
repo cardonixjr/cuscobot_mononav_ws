@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 import logging
-from tools import plot_keypoints
+from VO.tools import plot_keypoints
 
 
 class HandcraftDetector(object):
@@ -55,8 +55,8 @@ class HandcraftDetector(object):
             raise NotImplementedError(f"Not implement for feature type: {self.feature_type}")
 
     def __call__(self, image):
-        if image.shape[2] == 3:
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        # if image.shape[2] == 3:
+        #     image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
         logging.debug("keypoint detecting and computing...")
         kpts_cv, desc = self.det.detectAndCompute(image, None)
@@ -75,10 +75,22 @@ class HandcraftDetector(object):
 
 
 if __name__ == "__main__":
-    img0 = cv2.imread("../test_imgs/sequences/00/image_0/000000.png")
+    img0 = cv2.imread("/home/cardonixjr/cuscobot_mononav_ws/src/visual_core/test_images/sm.jpeg")
 
     handcraft_detector = HandcraftDetector({"type": "SIFT"})
     kptdesc = handcraft_detector(img0)
+
+    dict = handcraft_detector(img0)
+
+    size = dict['image_size']
+    kpts = dict['keypoints']
+    scores = dict['scores']
+    desc = dict['descriptors']
+
+    print(size)
+    print(kpts)
+    print(scores)
+    print(desc)
 
     img = plot_keypoints(img0, kptdesc["keypoints"], kptdesc["scores"] / kptdesc["scores"].max())
     cv2.imshow("SIFT", img)

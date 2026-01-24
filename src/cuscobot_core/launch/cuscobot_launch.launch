@@ -13,7 +13,7 @@
 	<node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
 
 	<!-- Starting Odometry and TF publisher node -->
-	<node pkg="cuscobot" type="deadReckoning.py" name="odom" output="screen"/>
+	<node pkg="cuscobot_core" type="deadReckoning.py" name="odom" output="screen"/>
 
 	<node pkg="usb_cam" type="usb_cam_node" name="usb_cam" output="screen">
 	    <param name="camera_info_url" value="file://$(find cuscobot_core)/param/camera.yaml" />
