@@ -54,7 +54,7 @@ class VisualOdometry(object):
         self.wheel_odom = []
 
         # Plotter
-        self.traj_plotter = TrajPlotter()
+        # self.traj_plotter = TrajPlotter()
 
         rospy.loginfo("VO node initialized")
 
@@ -118,7 +118,8 @@ class VisualOdometry(object):
                                             focal=self.focal, pp=self.pp)
             
             # get absolute pose based on absolute scale
-            self.absscale = self.get_absscale()
+            # self.absscale = self.get_absscale()
+            self.absscale = 1.0
 
             if(self.absscale > 0.1):
                 self.cur_t = self.cur_t + self.absscale * self.cur_t.dot(t)
@@ -133,9 +134,9 @@ class VisualOdometry(object):
                 cv2.imshow("Processed Image", input_img)
                 cv2.imshow("Keypoints", kp_img)
 
-                img2 = self.traj_plotter.update(t, self.cur_gt_pose)
-                cv2.imshow("traj",img2)
-                cv2.waitKey(1)
+                # img2 = self.traj_plotter.update(t, self.cur_gt_pose)
+                # cv2.imshow("traj",img2)
+                # cv2.waitKey(1)
 
         self.last_gt_pose = self.cur_gt_pose
         self.kptdescs['ref'] = self.kptdescs['cur']
@@ -198,12 +199,6 @@ class TrajPlotter(object):
                     cv2.FONT_HERSHEY_PLAIN, 1, (255, 255, 255), 1, 8)
 
         return self.traj
-    
-    
-def keypoints_plot(img, vo):
-    if img.shape[2] == 1:
-        img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
-    return plot_keypoints(img, vo.kptdescs["cur"]["keypoints"], vo.kptdescs["cur"]["scores"])
 
 if __name__ == "__main__":
     node = VisualOdometry()

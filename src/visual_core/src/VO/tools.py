@@ -3,6 +3,8 @@ import numpy as np
 import torch
 import collections
 import matplotlib.cm as cm
+import matplotlib.pyplot as plt
+import csv
 
 
 def image2tensor(frame, device):
@@ -89,3 +91,47 @@ def plot_matches(image0, image1, kpts0, kpts1, scores=None, layout="lr"):
             cv2.circle(out, (x1, y1 + H0), 2, c, -1, lineType=cv2.LINE_AA)
 
     return out
+
+def image_processing(img):
+    # TODO: desenvolver processo de melhoria de imagens
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    bilat = cv2.bilateralFilter(gray, d=9, sigmaColor=50, sigmaSpace=50)
+
+    blur = cv2.GaussianBlur(bilat, (5,5), 0)
+    out_img = cv2.addWeighted(bilat, 1.2, blur, -0.2, 0)
+    
+    return out_img
+
+
+def plot_results(wheel_odom, vo_odom):
+    # vo = np.array(self.vo_odom)
+    vos = np.array(vo_odom)
+    od = np.array(wheel_odom)
+    plt.figure()
+
+    if len(vos)>0:
+        plt.plot(vos[:,0], vos[:,2], label="VO (escalada)")
+
+    if len(od)>0:
+        plt.plot(od[:,0], od[:,2], label="Wheel Odometry")
+        
+    plt.title("Trajetórias")
+    plt.legend()
+    plt.xlabel("X (m)")
+    plt.ylabel("Z (m)")
+    plt.grid()
+    plt.show()
+
+def save_csv(wheel_odom, vo_odom):
+    # salvar VO escalada
+    with open("vo_scaled_trajectory.csv", "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["x","y","z"])
+        w.writerows(vo_odom)
+    
+    # salvar odom
+    with open("wheel_trajectory.csv", "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["x","y","z"])
+        w.writerows(wheel_odom)

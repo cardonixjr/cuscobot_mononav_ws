@@ -61,7 +61,7 @@ class VisualOdometry(object):
         pz = msg.pose.pose.position.z
         self.wheel_odom.append(np.array([px,py,pz]))
 
-        if DEBUG: print(f"ODOM RECEIVED x: {px} y:{py} z:{pz} ")
+        # if DEBUG: print(f"ODOM RECEIVED x: {px} y:{py} z:{pz} ")
 
     def image_callback(self, msg):
         if self.camera_matrix is None:
@@ -99,7 +99,13 @@ class VisualOdometry(object):
 
             # Separa apenas os matches considerados bons
             good = [m for m,n in matches if m.distance < 0.7*n.distance]
-        #     print(good)
+
+            # img_matches = np.empty((max(self.last_image.shape[0], input_img.shape[0]), self.last_image.shape[1] + input_img.shape[1], 3), dtype=np.uint8)
+            # cv2.drawMatches(self.last_image, self.last_kp, input_img, kp, good, img_matches, flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
+    
+            # cv2.imshow('Good Matches', img_matches)
+            # cv2.waitKey(50)
+
 
             if len(good) > 8:
                 # Coleta os pontos bons do frame atual e do ultimo frame
@@ -125,9 +131,12 @@ class VisualOdometry(object):
                     self.vo_odom.append(p_vo.copy())
 
                     # Aplica a escala
-                    self.absolute_scale = self.get_scale()
-                    # self.absolute_scale = 1.0
+                    # self.absolute_scale = self.get_scale()
+                    self.absolute_scale = 0.1
                     p_vo_scaled = p_vo * self.absolute_scale
+
+                    print(f"pvo: {p_vo}")
+                    print(f"pvo_scaled: {p_vo_scaled}")
                         
                     self.vo_scaled_odom.append(p_vo_scaled.copy())
 
@@ -152,13 +161,24 @@ class VisualOdometry(object):
                 scale = d_odom / d_vo
             
 
-        if DEBUG: print(f"scale: {scale}")
+        # if DEBUG: print(f"scale: {scale}")
         return scale
 
     def image_processing(self, img):
         # TODO: desenvolver processo de melhoria de imagens
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        return gray
+
+        # clahe = cv2.createCLAHE(clipLimit=1.5, tileGridSize=(8,8))
+        # g = clahe.apply(gray)
+
+        # blur = cv2.GaussianBlur(g, (7,7), 0)
+        # out_img = cv2.addWeighted(g, 1.15, blur, -0.15, 0)
+
+        bilat = cv2.bilateralFilter(gray, d=9, sigmaColor=50, sigmaSpace=50)
+        blur = cv2.GaussianBlur(bilat, (5,5), 0)
+        out_img = cv2.addWeighted(bilat, 1.2, blur, -0.2, 0)
+        
+        return out_img
     
     def form_transf(R, t):
         T = np.eye(4, dtype=np.float64)
