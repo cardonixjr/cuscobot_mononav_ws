@@ -6,6 +6,10 @@ import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import csv
 
+import pytransform3d.camera as pc
+
+from cycler import cycle
+
 
 def image2tensor(frame, device):
     return torch.from_numpy(frame / 255.).float()[None, None].to(device)
@@ -95,33 +99,97 @@ def plot_matches(image0, image1, kpts0, kpts1, scores=None, layout="lr"):
 def image_processing(img):
     # TODO: desenvolver processo de melhoria de imagens
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    out_img = gray
 
-    bilat = cv2.bilateralFilter(gray, d=9, sigmaColor=50, sigmaSpace=50)
+    #bilat = cv2.bilateralFilter(gray, d=9, sigmaColor=50, sigmaSpace=50)
 
-    blur = cv2.GaussianBlur(bilat, (5,5), 0)
-    out_img = cv2.addWeighted(bilat, 1.2, blur, -0.2, 0)
-    
+    #blur = cv2.GaussianBlur(bilat, (5,5), 0)
+    #out_img = cv2.addWeighted(bilat, 1.2, blur, -0.2, 0)
+
+    #outline = np.array([[-1, -1, -1],
+    #                    [-1,  8, -1],
+    #                    [-1, -1, -1]])
+    #out_img = cv2.filter2D(gray, -1, outline)
+
+    #sharpen = np.array([[0, -1, 0],
+    #                    [-1, 5,-1],
+    #                    [0, -1, 0]])
+    #out_img = cv2.filter2D(out_img, -1, sharpen)
+    clahe = cv2.createCLAHE(clipLimit=1.5, tileGridSize=(8,8))
+    g = clahe.apply(gray)
+
+    blur = cv2.GaussianBlur(g, (7,7), 0)
+    out_img = cv2.addWeighted(g, 1.15, blur, -0.15, 0)
+
+
     return out_img
 
 
 def plot_results(wheel_odom, vo_odom):
-    # vo = np.array(self.vo_odom)
     vos = np.array(vo_odom)
     od = np.array(wheel_odom)
     plt.figure()
 
     if len(vos)>0:
-        plt.plot(vos[:,0], vos[:,2], label="VO (escalada)")
+        plt.plot(-vos[:,2], -vos[:,1], label="VO (escalada)")
 
     if len(od)>0:
-        plt.plot(od[:,0], od[:,2], label="Wheel Odometry")
-        
+        plt.plot(od[:,0], od[:,1], label="Wheel Odometry")
+
     plt.title("Trajetórias")
     plt.legend()
     plt.xlabel("X (m)")
-    plt.ylabel("Z (m)")
+    plt.ylabel("Y (m)")
     plt.grid()
     plt.show()
+
+def plot_results_3d(wheel_odom, vo_odom):
+    vos = np.array(vo_odom)
+    od = np.array(wheel_odom)
+
+    fig = plt.figure(figsize=(9, 6))
+    ax = fig.add_subplot(111, projection='3d')
+
+    # Plota linhas conectando os pontos e marcadores pequenos
+    # ax.plot(-vos[:, 0], vos[:, 1], vos[:, 2], label='vo_scaled_trajectory', color='C0', marker='o', markersize=3, linewidth=1)
+    # ax.plot(od[:, 0], od[:, 1], od[:, 2], label='wheel_trajectory', color='C1', marker='^', markersize=3, linewidth=1)
+
+    ax.plot(vos[:, 2], vos[:, 1], vos[:, 0], label='vo_scaled_trajectory', color='C0', marker='o', markersize=3, linewidth=1)
+    ax.plot(od[:, 0], od[:, 2], od[:, 1], label='wheel_trajectory', color='C1', marker='^', markersize=3, linewidth=1)
+
+
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    ax.set_title('Trajetórias 3D')
+    ax.legend()
+    ax.grid(True)
+
+    plt.tight_layout()
+    plt.show()
+
+def plot_pose(poses, K):
+    number_of_frames = 20
+    image_size = np.array([640, 480])
+    #image_size = np.array([1920, 1080])
+
+    plt.figure()
+    #ax = pt.plot_transform()
+    ax = plt.axes(projection='3d')
+
+    camera_pose_poses = np.array(poses)
+
+
+    key_frames_indices = np.linspace(0, len(camera_pose_poses) - 1, number_of_frames, dtype=int)
+    colors = cycle("rgb")
+
+    for i, c in zip(key_frames_indices, colors):
+        pc.plot_camera(ax, K, camera_pose_poses[i],
+                    sensor_size=(248,192), virtual_image_distance=0.6, c=c)
+
+
+    plt.show()
+    
 
 def save_csv(wheel_odom, vo_odom):
     # salvar VO escalada
@@ -135,3 +203,23 @@ def save_csv(wheel_odom, vo_odom):
         w = csv.writer(f)
         w.writerow(["x","y","z"])
         w.writerows(wheel_odom)
+
+if __name__ == "__main__":
+    cap = cv2.VideoCapture(2)
+
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        # Process the frame (e.g., image_processing)
+        processed_frame = image_processing(frame)
+
+        # Display the processed frame
+        cv2.imshow("Processed Frame", processed_frame)
+
+        if cv2.waitKey(1) & 0xFF == ord("q"):
+            break
+
+    cap.release()
+    cv2.destroyAllWindows()

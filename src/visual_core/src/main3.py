@@ -8,8 +8,7 @@ from cv_bridge import CvBridge
 
 from VO.HandcraftDetector import HandcraftDetector
 from VO.FrameByFrameMatcher import FrameByFrameMatcher
-from VO.imageProcessing import *
-from VO.tools import plot_keypoints, plot_results, image_processing, save_csv
+from VO.tools import plot_keypoints, plot_results, plot_pose, image_processing, save_csv
 
 class VisualOdometry(object):
 
@@ -54,7 +53,6 @@ class VisualOdometry(object):
 
         self.pose_list = []
         self.vo_odom = []
-        self.vo_scaled_odom = []
         self.wheel_odom = []
 
         self.last_image = None
@@ -227,8 +225,15 @@ class VisualOdometry(object):
             Q2 = hom_Q2[:3, :] / hom_Q2[3, :]
              
             total_sum = sum(Q2[2, :] > 0) + sum(Q1[2, :] > 0)
-            relative_scale = np.mean(np.linalg.norm(Q1.T[:-1] - Q1.T[1:], axis=-1)/
-                                     np.linalg.norm(Q2.T[:-1] - Q2.T[1:], axis=-1))
+            
+            dQ1 = np.linalg.norm(Q1.T[:-1] - Q1.T[1:], axis=-1)
+            dQ2 = np.linalg.norm(Q2.T[:-1] - Q2.T[1:], axis=-1)
+            mask = dQ2 > 1e-8  # threshold para evitar divisões por zero
+            if np.any(mask):
+                relative_scale = np.mean(dQ1[mask] / dQ2[mask])
+            else:
+                relative_scale = 0.1  # ou outro valor padrão
+
             positives.append(total_sum + relative_scale)
             
 
@@ -275,8 +280,14 @@ class VisualOdometry(object):
             sum_of_pos_z_Q2 = sum(Q2[2, :] > 0)
 
             # Form point pairs and calculate the relative scale
-            relative_scale = np.mean(np.linalg.norm(Q1.T[:-1] - Q1.T[1:], axis=-1)/
-                                     np.linalg.norm(Q2.T[:-1] - Q2.T[1:], axis=-1))
+            # Form point pairs and calculate the relative scale
+            dQ1 = np.linalg.norm(Q1.T[:-1] - Q1.T[1:], axis=-1)
+            dQ2 = np.linalg.norm(Q2.T[:-1] - Q2.T[1:], axis=-1)
+            mask = dQ2 > 1e-8  # threshold para evitar divisões por zero
+            if np.any(mask):
+                relative_scale = np.mean(dQ1[mask] / dQ2[mask])
+            else:
+                relative_scale = 0.1  # ou outro valor padrão
             return sum_of_pos_z_Q1 + sum_of_pos_z_Q2, relative_scale
 
         # Decompose the essential matrix
@@ -299,7 +310,8 @@ class VisualOdometry(object):
         right_pair = pairs[right_pair_idx]
         relative_scale = relative_scales[right_pair_idx]
         R1, t = right_pair
-        t = t * relative_scale
+        # t = t * relative_scale
+        t = t * 0.1
         
         T = self.form_transf(R1, t)
         # Make the projection matrix
@@ -318,8 +330,9 @@ class VisualOdometry(object):
 
     def spin(self):
         rospy.spin()
-        save_csv(self.wheel_odom, self.vo_scaled_odom)
-        plot_results(self.wheel_odom, self.vo_scaled_odom)
+        save_csv(self.wheel_odom, self.vo_odom)
+        plot_results(self.wheel_odom, self.vo_odom)
+        plot_pose(self.pose_list, self.camera_matrix)
         cv2.destroyAllWindows()
 
 if __name__ == "__main__":
