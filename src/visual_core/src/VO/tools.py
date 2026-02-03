@@ -151,11 +151,11 @@ def plot_results_3d(wheel_odom, vo_odom):
     ax = fig.add_subplot(111, projection='3d')
 
     # Plota linhas conectando os pontos e marcadores pequenos
-    # ax.plot(-vos[:, 0], vos[:, 1], vos[:, 2], label='vo_scaled_trajectory', color='C0', marker='o', markersize=3, linewidth=1)
-    # ax.plot(od[:, 0], od[:, 1], od[:, 2], label='wheel_trajectory', color='C1', marker='^', markersize=3, linewidth=1)
+    ax.plot(-vos[:, 0], vos[:, 1], vos[:, 2], label='vo_scaled_trajectory', color='C0', marker='o', markersize=3, linewidth=1)
+    ax.plot(od[:, 0], od[:, 1], od[:, 2], label='wheel_trajectory', color='C1', marker='^', markersize=3, linewidth=1)
 
-    ax.plot(vos[:, 2], vos[:, 1], vos[:, 0], label='vo_scaled_trajectory', color='C0', marker='o', markersize=3, linewidth=1)
-    ax.plot(od[:, 0], od[:, 2], od[:, 1], label='wheel_trajectory', color='C1', marker='^', markersize=3, linewidth=1)
+    # ax.plot(vos[:, 2], vos[:, 1], vos[:, 0], label='vo_scaled_trajectory', color='C0', marker='o', markersize=3, linewidth=1)
+    # ax.plot(od[:, 0], od[:, 2], od[:, 1], label='wheel_trajectory', color='C1', marker='^', markersize=3, linewidth=1)
 
 
     ax.set_xlabel('X')
@@ -185,7 +185,7 @@ def plot_pose(poses, K):
 
     for i, c in zip(key_frames_indices, colors):
         pc.plot_camera(ax, K, camera_pose_poses[i],
-                    sensor_size=(248,192), virtual_image_distance=0.6, c=c)
+                    sensor_size=image_size, c=c)
 
 
     plt.show()

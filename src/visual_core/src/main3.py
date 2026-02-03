@@ -8,7 +8,7 @@ from cv_bridge import CvBridge
 
 from VO.HandcraftDetector import HandcraftDetector
 from VO.FrameByFrameMatcher import FrameByFrameMatcher
-from VO.tools import plot_keypoints, plot_results, plot_pose, image_processing, save_csv
+from VO.tools import plot_keypoints, plot_results, plot_results_3d, plot_pose, image_processing, save_csv
 
 class VisualOdometry(object):
 
@@ -29,7 +29,7 @@ class VisualOdometry(object):
         # Feature detector and keypoint matcher
         self.detector = HandcraftDetector({"type": "SIFT"})
         self.matcher = FrameByFrameMatcher({"type": "FLANN"})
-        self.absscale = 1.0
+        self.absscale = 0.05
 
         # Frame index counter
         self.index = 0
@@ -115,12 +115,13 @@ class VisualOdometry(object):
 
             # Get Absscale
             # self.absscale = self.get_absscale()
-            self.absscale = 0.1
+            self.absscale = 0.05
 
             # Get transf. matrix
             transf = self.get_pose(matches['cur_keypoints'], matches['ref_keypoints'])
             
             self.cur_pose = self.cur_pose @ transf
+            # self.cur_pose *= self.absscale
 
             hom_array = np.array([[0,0,0,1]])
             hom_camera_pose = np.concatenate((self.cur_pose,hom_array), axis=0)
@@ -310,8 +311,7 @@ class VisualOdometry(object):
         right_pair = pairs[right_pair_idx]
         relative_scale = relative_scales[right_pair_idx]
         R1, t = right_pair
-        # t = t * relative_scale
-        t = t * 0.1
+        t = t * relative_scale
         
         T = self.form_transf(R1, t)
         # Make the projection matrix
@@ -333,6 +333,7 @@ class VisualOdometry(object):
         save_csv(self.wheel_odom, self.vo_odom)
         plot_results(self.wheel_odom, self.vo_odom)
         plot_pose(self.pose_list, self.camera_matrix)
+        plot_results_3d(self.wheel_odom, self.vo_odom)
         cv2.destroyAllWindows()
 
 if __name__ == "__main__":
