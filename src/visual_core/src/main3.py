@@ -115,13 +115,17 @@ class VisualOdometry(object):
 
             # Get Absscale
             # self.absscale = self.get_absscale()
-            self.absscale = 0.05
+            # self.absscale = 0.05
 
             # Get transf. matrix
             transf = self.get_pose(matches['cur_keypoints'], matches['ref_keypoints'])
             
             self.cur_pose = self.cur_pose @ transf
+
             # self.cur_pose *= self.absscale
+            print(f"pose: {self.cur_pose}")
+            print(f"scaled pose: {self.cur_pose * self.absscale}")
+
 
             hom_array = np.array([[0,0,0,1]])
             hom_camera_pose = np.concatenate((self.cur_pose,hom_array), axis=0)
@@ -131,9 +135,9 @@ class VisualOdometry(object):
             self.vo_odom.append(p_vo.copy())
 
             
-            kp_img = plot_keypoints(img, kptdesc["keypoints"], kptdesc["scores"]/kptdesc["scores"].max())
-            cv2.imshow("Processed Image", input_img)
-            cv2.imshow("Keypoints", kp_img)   
+            # kp_img = plot_keypoints(img, kptdesc["keypoints"], kptdesc["scores"]/kptdesc["scores"].max())
+            # cv2.imshow("Processed Image", input_img)
+            # cv2.imshow("Keypoints", kp_img)   
 
         self.kptdescs['ref'] = self.kptdescs['cur']
         self.last_image = input_img
@@ -150,7 +154,7 @@ class VisualOdometry(object):
         cur_gt = None
         last_gt = None
 
-        if len(self.wheel_odom > 1):
+        if len(self.wheel_odom) > 1:
             cur_gt = self.wheel_odom[-1]
             last_gt = self.wheel_odom[-2]
 
@@ -172,7 +176,7 @@ class VisualOdometry(object):
         # Decompose the Essential matrix into R and t
         R, t = self.decomp_essential_mat_old(E, q1, q2)
 
-        if(self.absscale > 0.1):
+        if(self.absscale > 0.01):
             self.cur_t = self.cur_t + self.absscale * self.cur_t.dot(t)
             self.cur_R = R.dot(self.cur_R)
         else:

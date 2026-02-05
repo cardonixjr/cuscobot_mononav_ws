@@ -152,8 +152,8 @@ class VisualOdometry(object):
 
             if PLOT:
                 kp_img = plot_keypoints(img, kpts, scores/scores.max())
-                cv2.imshow("Processed Image", input_img)
-                cv2.imshow("Keypoints", kp_img)
+                # cv2.imshow("Processed Image", input_img)
+                # cv2.imshow("Keypoints", kp_img)
                 cv2.waitKey(1)
 
         # Reseta variaveis
