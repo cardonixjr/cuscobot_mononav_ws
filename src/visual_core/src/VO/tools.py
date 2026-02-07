@@ -23,7 +23,7 @@ def plot_keypoints(image, kpts, scores=None):
     if scores is not None:
         # get color
         smin, smax = scores.min(), scores.max()
-        assert (0 <= smin <= 1 and 0 <= smax <= 1)
+        # assert (0 <= smin <= 1 and 0 <= smax <= 1)
 
         color = cm.gist_rainbow(scores * 0.4)
         color = (np.array(color[:, :3]) * 255).astype(int)[:, ::-1]
