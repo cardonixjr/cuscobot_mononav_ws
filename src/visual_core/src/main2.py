@@ -37,7 +37,7 @@ class VisualOdometry(object):
         #     fastThreshold=self.config["ORB"]["fastThreshold"])
 
         # self.detector = cv2.ORB_create(3000)
-
+        # 
         # # FLANN MATCHER 
         # FLANN_INDEX_LSH = 6
         # index_params = dict(algorithm=FLANN_INDEX_LSH, table_number=6, key_size=12, multi_probe_level=1)
@@ -53,14 +53,14 @@ class VisualOdometry(object):
         #     )
 
         self.detector = cv2.SIFT_create()
-
+         
         FLANN_INDEX_KDTREE = 1
         index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
         search_params = dict(checks=50)  # or pass empty dictionary
         self.matcher = cv2.FlannBasedMatcher(index_params, search_params)
 
         # absscale
-        self.absscale = 0.05
+        self.absscale = 0.9
 
         # Frame index counter
         self.index = 0
@@ -181,11 +181,11 @@ class VisualOdometry(object):
             self.scaled_vo_odom.append(self.cur_pose[:3, 3] * self.absscale)
 
 
-        # if kpts:
-        #     img_with_kpts = cv2.drawKeypoints(input_img, kpts, None, (0, 255, 0), cv2.MARKER_CROSS)
-        #     cv2.imshow("Keypoints", img_with_kpts)
-
-        # cv2.imshow("Processed Image", input_img)
+        if kpts:
+            img_with_kpts = cv2.drawKeypoints(input_img, kpts, None, (0, 255, 0), cv2.MARKER_CROSS)
+            cv2.imshow("Keypoints", img_with_kpts)
+            
+        cv2.imshow("Processed Image", input_img)
 
 
         self.cur_gt = self.wheel_odom[-1] if len(self.wheel_odom) >0 else None
@@ -347,7 +347,7 @@ class VisualOdometry(object):
 
     def spin(self):
         rospy.spin()
-        # save_csv(self.wheel_odom, self.scaled_vo_odom)
+        save_csv(self.wheel_odom, self.scaled_vo_odom,name_modifier="SIFT_IDA") 
         plot_results(self.wheel_odom, self.scaled_vo_odom)
         plot_pose(self.pose_list, self.camera_matrix)
         plot_results_3d(self.wheel_odom, self.scaled_vo_odom)

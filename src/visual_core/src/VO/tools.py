@@ -117,7 +117,7 @@ def image_processing(img):
     #out_img = cv2.filter2D(out_img, -1, sharpen)
     clahe = cv2.createCLAHE(clipLimit=1.5, tileGridSize=(8,8))
     g = clahe.apply(gray)
-
+    
     blur = cv2.GaussianBlur(g, (7,7), 0)
     out_img = cv2.addWeighted(g, 1.15, blur, -0.15, 0)
 
@@ -131,7 +131,7 @@ def plot_results(wheel_odom, vo_odom):
     plt.figure()
 
     if len(vos)>0:
-        plt.plot(-vos[:,2], -vos[:,1], label="VO (escalada)")
+        plt.plot(vos[:,1], -vos[:,2], label="VO (escalada)")
 
     if len(od)>0:
         plt.plot(od[:,0], od[:,1], label="Wheel Odometry")
@@ -151,7 +151,7 @@ def plot_results_3d(wheel_odom, vo_odom):
     ax = fig.add_subplot(111, projection='3d')
 
     # Plota linhas conectando os pontos e marcadores pequenos
-    ax.plot(-vos[:, 0], vos[:, 1], vos[:, 2], label='vo_scaled_trajectory', color='C0', marker='o', markersize=3, linewidth=1)
+    ax.plot(vos[:, 2], -vos[:, 1], vos[:, 0], label='vo_scaled_trajectory', color='C0', marker='o', markersize=3, linewidth=1)
     ax.plot(od[:, 0], od[:, 1], od[:, 2], label='wheel_trajectory', color='C1', marker='^', markersize=3, linewidth=1)
 
     # ax.plot(vos[:, 2], vos[:, 1], vos[:, 0], label='vo_scaled_trajectory', color='C0', marker='o', markersize=3, linewidth=1)
@@ -191,15 +191,15 @@ def plot_pose(poses, K):
     plt.show()
     
 
-def save_csv(wheel_odom, vo_odom):
+def save_csv(wheel_odom, vo_odom,name_modifier=""):
     # salvar VO escalada
-    with open("vo_scaled_trajectory.csv", "w", newline="") as f:
+    with open(f"vo_scaled_trajectory-{name_modifier}.csv", "w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["x","y","z"])
         w.writerows(vo_odom)
     
     # salvar odom
-    with open("wheel_trajectory.csv", "w", newline="") as f:
+    with open(f"wheel_trajectory-{name_modifier}.csv", "w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["x","y","z"])
         w.writerows(wheel_odom)
