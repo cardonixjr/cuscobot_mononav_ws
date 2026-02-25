@@ -125,7 +125,7 @@ def image_processing(img):
     return out_img
 
 
-def plot_results(wheel_odom, vo_odom):
+def plot_results(wheel_odom, vo_odom, name_modifier=""):
     vos = np.array(vo_odom)
     od = np.array(wheel_odom)
     plt.figure()
@@ -143,7 +143,9 @@ def plot_results(wheel_odom, vo_odom):
     plt.grid()
     plt.show()
 
-def plot_results_3d(wheel_odom, vo_odom):
+    plt.savefig(f"results_2d_{name_modifier}.png")
+
+def plot_results_3d(wheel_odom, vo_odom, name_modifier=""):
     vos = np.array(vo_odom)
     od = np.array(wheel_odom)
 
@@ -167,6 +169,8 @@ def plot_results_3d(wheel_odom, vo_odom):
 
     plt.tight_layout()
     plt.show()
+
+    plt.savefig(f"results_3d_{name_modifier}.png")
 
 def plot_pose(poses, K):
     number_of_frames = 20

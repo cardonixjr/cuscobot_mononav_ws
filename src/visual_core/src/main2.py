@@ -26,37 +26,41 @@ class VisualOdometry(object):
         self.camera_matrix = None
         self.dist_coeffs = None
 
-        # ------- ORB -------
-        # self.detector = cv2.ORB_create(nfeatures=self.config["ORB"]["nfeatures"],
-        #     scaleFactor=self.config["ORB"]["scaleFactor"],
-        #     nlevels=self.config["ORB"]["nLevels"],
-        #     edgeThreshold=self.config["ORB"]["edgeThreshold"],
-        #     firstLevel=self.config["ORB"]["firstLevel"],
-        #     WTA_K=self.config["ORB"]["WTA_K"],
-        #     patchSize=self.config["ORB"]["patchSize"],
-        #     fastThreshold=self.config["ORB"]["fastThreshold"])
+        # Detection
+        self.distance_ratio = 0.65 #0.75
 
-        # self.detector = cv2.ORB_create(3000)
-        # 
+        # ------- ORB -------
+
+        # self.detector = cv2.ORB_create(nfeatures=1000,
+        #     scaleFactor=1.5, #1.2
+        #     nlevels=10, #8
+        #     edgeThreshold=31,
+        #     firstLevel=0,
+        #     WTA_K=2,
+        #     patchSize=31,
+        #     fastThreshold=7) #2
+# 
         # # FLANN MATCHER 
         # FLANN_INDEX_LSH = 6
         # index_params = dict(algorithm=FLANN_INDEX_LSH, table_number=6, key_size=12, multi_probe_level=1)
         # search_params = dict(checks=50)
         # self.matcher = cv2.FlannBasedMatcher(indexParams=index_params, searchParams=search_params)
         
-        # ------- SIFT -------
-        # self.detector = cv2.SIFT_create(nfeatures=self.config["SIFT"]["nfeatures"],
-        #     nOctaveLayers=self.config["SIFT"]["nOctaveLayers"],
-        #     contrastThreshold=self.config["SIFT"]["contrastThreshold"],
-        #     edgeThreshold=self.config["SIFT"]["edgeThreshold"],
-        #     sigma=self.config["SIFT"]["sigma"]
-        #     )
 
-        self.detector = cv2.SIFT_create()
-         
+
+        # ------- SIFT -------
+        self.detector = cv2.SIFT_create(nfeatures=2000, #1000
+            nOctaveLayers=3,
+            contrastThreshold=0.02, #0.004
+            edgeThreshold=12, #10
+            sigma=1.6
+            )
+ 
         FLANN_INDEX_KDTREE = 1
-        index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
-        search_params = dict(checks=50)  # or pass empty dictionary
+        index_params = dict(algorithm=FLANN_INDEX_KDTREE, 
+                            trees=8 #5
+                            )
+        search_params = dict(checks=70) #50 # or pass empty dictionary
         self.matcher = cv2.FlannBasedMatcher(index_params, search_params)
 
         # absscale
@@ -163,7 +167,7 @@ class VisualOdometry(object):
             self.cur_kpts = kpts
                
             # Get Mathces
-            q1, q2, good = self.get_matches(input_img)
+            q1, q2, good = self.get_matches(input_img, ratio = self.distance_ratio)
 
             transformation = self.get_pose(q1, q2)
 
@@ -197,7 +201,7 @@ class VisualOdometry(object):
             return
             # raise KeyboardInterrupt
 
-    def get_matches(self, input_img):
+    def get_matches(self, input_img, ratio = 0.75):
             # Match keypoints
             if len(self.last_kpts) > 6 and len(self.cur_kpts) > 6:
                 matches = self.matcher.knnMatch(self.last_desc, self.cur_desc, k=2)
@@ -206,7 +210,7 @@ class VisualOdometry(object):
                 good_matches = []
                 try:
                     for m, n in matches:
-                        if m.distance < 0.5 * n.distance:
+                        if m.distance < ratio * n.distance:
                             good_matches.append(m)
                 except ValueError:
                     pass
@@ -346,11 +350,13 @@ class VisualOdometry(object):
         return scale
 
     def spin(self):
+        name_mod = "SIFT_2502_01"
+
         rospy.spin()
-        save_csv(self.wheel_odom, self.scaled_vo_odom,name_modifier="SIFT_IDA") 
-        plot_results(self.wheel_odom, self.scaled_vo_odom)
-        plot_pose(self.pose_list, self.camera_matrix)
-        plot_results_3d(self.wheel_odom, self.scaled_vo_odom)
+        save_csv(self.wheel_odom, self.scaled_vo_odom,name_modifier=name_mod) 
+        plot_results(self.wheel_odom, self.scaled_vo_odom, name_modifier=name_mod)
+        # plot_pose(self.pose_list, self.camera_matrix)
+        # plot_results_3d(self.wheel_odom, self.scaled_vo_odom, name_modifier=name_mod)
         cv2.destroyAllWindows()
 
 if __name__ == "__main__":
