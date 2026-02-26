@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 import rospy
 import cv2
 import numpy as np
@@ -8,7 +9,7 @@ from cv_bridge import CvBridge
 
 from VO.HandcraftDetector import HandcraftDetector
 from VO.FrameByFrameMatcher import FrameByFrameMatcher
-from VO.tools import plot_keypoints, plot_results, plot_results_3d, plot_pose, image_processing, save_csv
+from VO.tools import plot_keypoints, plot_results, plot_results_3d, image_processing, save_csv
 
 class VisualOdometry(object):
 
@@ -17,8 +18,8 @@ class VisualOdometry(object):
         rospy.init_node("visual_odom")
 
         # Subscriber
-        rospy.Subscriber("/usb_cam/image_raw", Image, self.image_callback)
-        rospy.Subscriber("/usb_cam/camera_info", CameraInfo, self.camera_info_callback)
+        rospy.Subscriber("/camera/image_raw", Image, self.image_callback)
+        rospy.Subscriber("/camera/camera_info", CameraInfo, self.camera_info_callback)
         rospy.Subscriber("/odom", Odometry, self.odom_callback)
 
         # Opencv camera config
@@ -31,37 +32,37 @@ class VisualOdometry(object):
 
         # ------- ORB -------
 
-        # self.detector = cv2.ORB_create(nfeatures=1000,
-        #     scaleFactor=1.5, #1.2
-        #     nlevels=10, #8
-        #     edgeThreshold=31,
-        #     firstLevel=0,
-        #     WTA_K=2,
-        #     patchSize=31,
-        #     fastThreshold=7) #2
-# 
-        # # FLANN MATCHER 
-        # FLANN_INDEX_LSH = 6
-        # index_params = dict(algorithm=FLANN_INDEX_LSH, table_number=6, key_size=12, multi_probe_level=1)
-        # search_params = dict(checks=50)
-        # self.matcher = cv2.FlannBasedMatcher(indexParams=index_params, searchParams=search_params)
+        self.detector = cv2.ORB_create(nfeatures=1000,
+            scaleFactor=1.5, #1.2
+            nlevels=10, #8
+            edgeThreshold=31,
+            firstLevel=0,
+            WTA_K=2,
+            patchSize=31,
+            fastThreshold=7) #2
+  
+        # FLANN MATCHER 
+        FLANN_INDEX_LSH = 6
+        index_params = dict(algorithm=FLANN_INDEX_LSH, table_number=6, key_size=12, multi_probe_level=1)
+        search_params = dict(checks=50)
+        self.matcher = cv2.FlannBasedMatcher(indexParams=index_params, searchParams=search_params)
         
 
 
         # ------- SIFT -------
-        self.detector = cv2.SIFT_create(nfeatures=2000, #1000
-            nOctaveLayers=3,
-            contrastThreshold=0.02, #0.004
-            edgeThreshold=12, #10
-            sigma=1.6
-            )
- 
-        FLANN_INDEX_KDTREE = 1
-        index_params = dict(algorithm=FLANN_INDEX_KDTREE, 
-                            trees=8 #5
-                            )
-        search_params = dict(checks=70) #50 # or pass empty dictionary
-        self.matcher = cv2.FlannBasedMatcher(index_params, search_params)
+        # self.detector = cv2.SIFT_create(nfeatures=2000, #1000
+        #     nOctaveLayers=3,
+        #     contrastThreshold=0.02, #0.004
+        #     edgeThreshold=12, #10
+        #     sigma=1.6
+        #     )
+ # 
+        # FLANN_INDEX_KDTREE = 1
+        # index_params = dict(algorithm=FLANN_INDEX_KDTREE, 
+        #                     trees=8 #5
+        #                     )
+        # search_params = dict(checks=70) #50 # or pass empty dictionary
+        # self.matcher = cv2.FlannBasedMatcher(index_params, search_params)
 
         # absscale
         self.absscale = 0.9
@@ -141,6 +142,8 @@ class VisualOdometry(object):
         img = self.bridge.imgmsg_to_cv2(msg, "bgr8")
         input_img = image_processing(img)
 
+        # rospy.loginfo("Image received")
+
         # Aplica a detecção de keypoints no frame atual
         kpts, desc = self.detector.detectAndCompute(input_img, None)
 
@@ -185,11 +188,11 @@ class VisualOdometry(object):
             self.scaled_vo_odom.append(self.cur_pose[:3, 3] * self.absscale)
 
 
-        if kpts:
-            img_with_kpts = cv2.drawKeypoints(input_img, kpts, None, (0, 255, 0), cv2.MARKER_CROSS)
-            cv2.imshow("Keypoints", img_with_kpts)
-            
-        cv2.imshow("Processed Image", input_img)
+        # if kpts:
+        #     img_with_kpts = cv2.drawKeypoints(input_img, kpts, None, (0, 255, 0), cv2.MARKER_CROSS)
+        #     cv2.imshow("Keypoints", img_with_kpts)
+        #     
+        # cv2.imshow("Processed Image", input_img)
 
 
         self.cur_gt = self.wheel_odom[-1] if len(self.wheel_odom) >0 else None
@@ -350,7 +353,7 @@ class VisualOdometry(object):
         return scale
 
     def spin(self):
-        name_mod = "SIFT_2502_01"
+        name_mod = "ORB_2602_01"
 
         rospy.spin()
         save_csv(self.wheel_odom, self.scaled_vo_odom,name_modifier=name_mod) 
@@ -359,10 +362,17 @@ class VisualOdometry(object):
         # plot_results_3d(self.wheel_odom, self.scaled_vo_odom, name_modifier=name_mod)
         cv2.destroyAllWindows()
 
+    # def save_on_shutdown(self):
+    #     name_mod = "SIFT_2602_01"
+    #     rospy.loginfo("Saving results to csv")
+    #     save_csv(self.wheel_odom, self.scaled_vo_odom, name_modifier=name_mod)
+
 if __name__ == "__main__":
     node = VisualOdometry()
     try:
         node.spin()
     except KeyboardInterrupt:
-        # node.save_csv()
+        rospy.loginfo("Keyboard interrupted, shutting down.")
         pass
+    # finally:
+    #     node.save_on_shutdown()

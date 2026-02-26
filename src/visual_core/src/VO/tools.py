@@ -1,18 +1,14 @@
 import cv2
 import numpy as np
-import torch
 import collections
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import csv
+import os
 
-import pytransform3d.camera as pc
+# import pytransform3d.camera as pc
 
 from cycler import cycle
-
-
-def image2tensor(frame, device):
-    return torch.from_numpy(frame / 255.).float()[None, None].to(device)
 
 
 # --- VISUALIZATION ---
@@ -172,41 +168,47 @@ def plot_results_3d(wheel_odom, vo_odom, name_modifier=""):
 
     plt.savefig(f"results_3d_{name_modifier}.png")
 
-def plot_pose(poses, K):
-    number_of_frames = 20
-    image_size = np.array([640, 480])
-    #image_size = np.array([1920, 1080])
-
-    plt.figure()
-    #ax = pt.plot_transform()
-    ax = plt.axes(projection='3d')
-
-    camera_pose_poses = np.array(poses)
-
-
-    key_frames_indices = np.linspace(0, len(camera_pose_poses) - 1, number_of_frames, dtype=int)
-    colors = cycle("rgb")
-
-    for i, c in zip(key_frames_indices, colors):
-        pc.plot_camera(ax, K, camera_pose_poses[i],
-                    sensor_size=image_size, c=c)
-
-
-    plt.show()
+#def plot_pose(poses, K):
+#    number_of_frames = 20
+#    image_size = np.array([640, 480])
+#    #image_size = np.array([1920, 1080])
+#
+#    plt.figure()
+#    #ax = pt.plot_transform()
+#    ax = plt.axes(projection='3d')
+#
+#    camera_pose_poses = np.array(poses)
+#
+#
+#    key_frames_indices = np.linspace(0, len(camera_pose_poses) - 1, number_of_frames, dtype=int)
+#    colors = cycle("rgb")
+#
+#    for i, c in zip(key_frames_indices, colors):
+#        pc.plot_camera(ax, K, camera_pose_poses[i],
+#                    sensor_size=image_size, c=c)
+#
+#
+#    plt.show()
     
 
-def save_csv(wheel_odom, vo_odom,name_modifier=""):
+def save_csv(wheel_odom, vo_odom, name_modifier=""):
+    # Converter para listas de floats
+    vo_odom_list = [list(map(float, v)) for v in vo_odom]
+    wheel_odom_list = [list(map(float, w)) for w in wheel_odom]
+
     # salvar VO escalada
     with open(f"vo_scaled_trajectory-{name_modifier}.csv", "w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["x","y","z"])
-        w.writerows(vo_odom)
+        w.writerows(vo_odom_list)
+    print(f"[DEBUG] Saved vo_scaled_trajectory-{name_modifier}.csv")
     
     # salvar odom
     with open(f"wheel_trajectory-{name_modifier}.csv", "w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["x","y","z"])
-        w.writerows(wheel_odom)
+        w.writerows(wheel_odom_list)
+    print(f"[DEBUG] Saved wheel_trajectory-{name_modifier}.csv")
 
 if __name__ == "__main__":
     cap = cv2.VideoCapture(2)

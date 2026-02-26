@@ -1,8 +1,10 @@
 <?xml version="1.0" ?>
 
 <launch>
-
 	<!-- Starting Teleop node -->
-	<node name="teleop_twist_keyboard" pkg="teleop_twist_keyboard" type="teleop_twist_keyboard.py" /> 
+	<node name="teleop_twist_keyboard" pkg="teleop_twist_keyboard" type="teleop_twist_keyboard.py" />
+
+	<!-- Starting Visual Odometry -->
+	<node name="visual_odometry" pkg="visual_core" type="main2.py" output="screen" />
 
 </launch>
