@@ -32,7 +32,7 @@ class VisualOdometry(object):
 
         # ------- ORB -------
 
-        self.detector = cv2.ORB_create(nfeatures=1000,
+        self.detector = cv2.ORB_create(nfeatures=1500,
             scaleFactor=1.5, #1.2
             nlevels=10, #8
             edgeThreshold=31,
@@ -40,32 +40,32 @@ class VisualOdometry(object):
             WTA_K=2,
             patchSize=31,
             fastThreshold=7) #2
-  
+            
         # FLANN MATCHER 
         FLANN_INDEX_LSH = 6
         index_params = dict(algorithm=FLANN_INDEX_LSH, table_number=6, key_size=12, multi_probe_level=1)
         search_params = dict(checks=50)
         self.matcher = cv2.FlannBasedMatcher(indexParams=index_params, searchParams=search_params)
-        
+        # absscale
+        self.absscale = 0.25
 
 
-        # ------- SIFT -------
-        # self.detector = cv2.SIFT_create(nfeatures=2000, #1000
+        # # ------- SIFT -------
+        # self.detector = cv2.SIFT_create(nfeatures=1500, #1000
         #     nOctaveLayers=3,
-        #     contrastThreshold=0.02, #0.004
+        #     contrastThreshold=0.02, #0.04
         #     edgeThreshold=12, #10
         #     sigma=1.6
         #     )
- # 
+        # 
         # FLANN_INDEX_KDTREE = 1
         # index_params = dict(algorithm=FLANN_INDEX_KDTREE, 
-        #                     trees=8 #5
+        #                     trees=10 #5
         #                     )
-        # search_params = dict(checks=70) #50 # or pass empty dictionary
+        # search_params = dict(checks=100) #50 # or pass empty dictionary
         # self.matcher = cv2.FlannBasedMatcher(index_params, search_params)
-
-        # absscale
-        self.absscale = 0.9
+        # # absscale
+        # self.absscale = 0.55
 
         # Frame index counter
         self.index = 0
@@ -353,7 +353,7 @@ class VisualOdometry(object):
         return scale
 
     def spin(self):
-        name_mod = "ORB_2602_01"
+        name_mod = "ORB_2702_04"
 
         rospy.spin()
         save_csv(self.wheel_odom, self.scaled_vo_odom,name_modifier=name_mod) 
@@ -362,10 +362,6 @@ class VisualOdometry(object):
         # plot_results_3d(self.wheel_odom, self.scaled_vo_odom, name_modifier=name_mod)
         cv2.destroyAllWindows()
 
-    # def save_on_shutdown(self):
-    #     name_mod = "SIFT_2602_01"
-    #     rospy.loginfo("Saving results to csv")
-    #     save_csv(self.wheel_odom, self.scaled_vo_odom, name_modifier=name_mod)
 
 if __name__ == "__main__":
     node = VisualOdometry()

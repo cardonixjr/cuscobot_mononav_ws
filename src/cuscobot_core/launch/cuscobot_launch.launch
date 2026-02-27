@@ -31,4 +31,8 @@
 	<param name="baud"              type="int"                  value="57600"/>
 	</node>
 
+	<!-- Starting Teleop node -->
+	<node name="teleop_twist_keyboard" pkg="teleop_twist_keyboard" type="teleop_twist_keyboard.py" />
+
+
 </launch>
