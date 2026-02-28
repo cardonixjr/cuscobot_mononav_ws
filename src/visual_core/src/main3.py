@@ -8,7 +8,7 @@ from cv_bridge import CvBridge
 
 from VO.HandcraftDetector import HandcraftDetector
 from VO.FrameByFrameMatcher import FrameByFrameMatcher
-from VO.tools import plot_keypoints, plot_results, plot_results_3d, plot_pose, image_processing, save_csv
+from VO.tools import plot_keypoints, plot_results, plot_results_3d, image_processing, save_csv
 
 class VisualOdometry(object):
 
@@ -274,7 +274,6 @@ class VisualOdometry(object):
         rospy.spin()
         save_csv(self.wheel_odom, self.scaled_vo_odom)
         plot_results(self.wheel_odom, self.scaled_vo_odom)
-        plot_pose(self.pose_list, self.camera_matrix)
         plot_results_3d(self.wheel_odom, self.scaled_vo_odom)
         cv2.destroyAllWindows()
 
