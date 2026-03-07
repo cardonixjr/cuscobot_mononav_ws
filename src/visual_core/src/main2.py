@@ -353,11 +353,11 @@ class VisualOdometry(object):
         return scale
 
     def spin(self):
-        name_mod = "ORB_2702_04"
+        name_mod = "ORB_0703_TESTE"
 
         rospy.spin()
         save_csv(self.wheel_odom, self.scaled_vo_odom,name_modifier=name_mod) 
-        plot_results(self.wheel_odom, self.scaled_vo_odom, name_modifier=name_mod)
+        #plot_results(self.wheel_odom, self.scaled_vo_odom, name_modifier=name_mod)
         # plot_pose(self.pose_list, self.camera_matrix)
         # plot_results_3d(self.wheel_odom, self.scaled_vo_odom, name_modifier=name_mod)
         cv2.destroyAllWindows()
