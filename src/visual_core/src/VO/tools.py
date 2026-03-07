@@ -1,15 +1,8 @@
 import cv2
 import numpy as np
-import collections
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import csv
-import os
-
-# import pytransform3d.camera as pc
-
-from cycler import cycle
-
 
 # --- VISUALIZATION ---
 # based on: https://github.com/magicleap/SuperGluePretrainedNetwork/blob/master/models/utils.py
@@ -137,9 +130,9 @@ def plot_results(wheel_odom, vo_odom, name_modifier=""):
     plt.xlabel("X (m)")
     plt.ylabel("Y (m)")
     plt.grid()
-    plt.show()
 
-    plt.savefig(f"results_2d_{name_modifier}.png")
+    plt.savefig(f"src/visual_core/results/results_2d_{name_modifier}.png")
+    plt.show()
 
 def plot_results_3d(wheel_odom, vo_odom, name_modifier=""):
     vos = np.array(vo_odom)
@@ -152,10 +145,6 @@ def plot_results_3d(wheel_odom, vo_odom, name_modifier=""):
     ax.plot(vos[:, 2], -vos[:, 1], vos[:, 0], label='vo_scaled_trajectory', color='C0', marker='o', markersize=3, linewidth=1)
     ax.plot(od[:, 0], od[:, 1], od[:, 2], label='wheel_trajectory', color='C1', marker='^', markersize=3, linewidth=1)
 
-    # ax.plot(vos[:, 2], vos[:, 1], vos[:, 0], label='vo_scaled_trajectory', color='C0', marker='o', markersize=3, linewidth=1)
-    # ax.plot(od[:, 0], od[:, 2], od[:, 1], label='wheel_trajectory', color='C1', marker='^', markersize=3, linewidth=1)
-
-
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
     ax.set_zlabel('Z')
@@ -164,9 +153,8 @@ def plot_results_3d(wheel_odom, vo_odom, name_modifier=""):
     ax.grid(True)
 
     plt.tight_layout()
+    plt.savefig(f"src/visual_core/results/results_3d_{name_modifier}.png")
     plt.show()
-
-    plt.savefig(f"results_3d_{name_modifier}.png")
 
 #def plot_pose(poses, K):
 #    number_of_frames = 20
@@ -197,7 +185,7 @@ def save_csv(wheel_odom, vo_odom, name_modifier=""):
     wheel_odom_list = [list(map(float, w)) for w in wheel_odom]
 
     # salvar VO escalada
-    with open(f"vo_scaled_trajectory-{name_modifier}.csv", "w", newline="") as f:
+    with open(f"src/visual_core/results/vo_scaled_trajectory-{name_modifier}.csv", "w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["x","y","z"])
         w.writerows(vo_odom_list)

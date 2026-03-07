@@ -7,9 +7,7 @@ from nav_msgs.msg import Odometry
 from sensor_msgs.msg import Image, CameraInfo
 from cv_bridge import CvBridge
 
-from VO.HandcraftDetector import HandcraftDetector
-from VO.FrameByFrameMatcher import FrameByFrameMatcher
-from VO.tools import plot_keypoints, plot_results, plot_results_3d, image_processing, save_csv
+from VO.tools import plot_results, plot_results_3d, image_processing, save_csv
 
 class VisualOdometry(object):
 
@@ -187,7 +185,7 @@ class VisualOdometry(object):
             self.scaled_pose_list.append(hom_camera_pose * self.absscale)
             self.scaled_vo_odom.append(self.cur_pose[:3, 3] * self.absscale)
 
-
+        # Plota keypoints
         # if kpts:
         #     img_with_kpts = cv2.drawKeypoints(input_img, kpts, None, (0, 255, 0), cv2.MARKER_CROSS)
         #     cv2.imshow("Keypoints", img_with_kpts)
@@ -251,21 +249,6 @@ class VisualOdometry(object):
         T = self.form_transf(R_base, np.squeeze(t_base))
 
         return T
-    
-        # if E is not None:
-
-        #     # Recupera a pose do ultimo frame
-        #     _, R, t, _ = cv2.recoverPose(E, q2, q1, self.camera_matrix)
-
-            
-        #     # Encontra a pose atual
-        #     T = np.eye(4)
-        #     T[:3,:3] = R
-        #     T[:3,3]  = t.flatten()
-
-        #     return T
-        
-        # return None
 
     def decomp_essential_mat_old(self, E, q1, q2):
         def sum_z_cal_relative_scale(R, t):
@@ -353,12 +336,20 @@ class VisualOdometry(object):
         return scale
 
     def spin(self):
+<<<<<<< HEAD
         name_mod = "ORB_0703_TESTE"
 
         rospy.spin()
         save_csv(self.wheel_odom, self.scaled_vo_odom,name_modifier=name_mod) 
         #plot_results(self.wheel_odom, self.scaled_vo_odom, name_modifier=name_mod)
         # plot_pose(self.pose_list, self.camera_matrix)
+=======
+        name_mod = "TESTEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE"
+
+        rospy.spin()
+        save_csv(self.wheel_odom, self.scaled_vo_odom,name_modifier=name_mod) 
+        plot_results(self.wheel_odom, self.scaled_vo_odom, name_modifier=name_mod)
+>>>>>>> 1068ed040f84e953df83dc0c06142fd9ccef9f41
         # plot_results_3d(self.wheel_odom, self.scaled_vo_odom, name_modifier=name_mod)
         cv2.destroyAllWindows()
 

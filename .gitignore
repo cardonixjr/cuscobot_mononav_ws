@@ -1,0 +1,6 @@
+build/
+devel/
+yolov8n.pt
+.catkin_workspace
+src/visual_core/src/VO/__pycache__
+src/cuscobot_core/src/__pycache__

@@ -15,6 +15,17 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
 )
 
+find_package(OpenCV REQUIRED)
+
+find_package(catkin REQUIRED COMPONENTS
+  roscpp
+  cv_bridge
+  image_transport
+  sensor_msgs
+  nav_msgs
+  geometry_msgs
+)
+
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
@@ -120,6 +131,7 @@ catkin_package(
 include_directories(
 # include
   ${catkin_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
@@ -136,6 +148,10 @@ include_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/visual_core_node.cpp)
+
+add_executable(vo_node src/vo_node.cpp)
+target_link_libraries(vo_node ${catkin_LIBRARIES} ${OpenCV_LIBS})
+add_dependencies(vo_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
