@@ -185,7 +185,7 @@ def save_csv(wheel_odom, vo_odom, name_modifier=""):
     wheel_odom_list = [list(map(float, w)) for w in wheel_odom]
 
     # salvar VO escalada
-    with open(f"src/visual_core/results/vo_scaled_trajectory-{name_modifier}.csv", "w", newline="") as f:
+    with open(f"vo_scaled_trajectory-{name_modifier}.csv", "w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["x","y","z"])
         w.writerows(vo_odom_list)
