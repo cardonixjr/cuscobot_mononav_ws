@@ -5,6 +5,7 @@ import csv
 import os
 import json
 import pickle
+import scipy.io
 from matplotlib import pyplot as plt
 from scipy.ndimage import uniform_filter1d
 
@@ -12,9 +13,42 @@ from scipy.ndimage import uniform_filter1d
 MARKER_SIZE = 0.144
 
 # Carregar calibração de câmera (se disponível)
-def load_camera_calibration(calib_pkl="calibracao/calibração/calibration.pkl", calib_json="camera_calibration/camera_calibration.json"):
-    """Carrega calibração de câmera de arquivo .pkl (preferencial) ou JSON."""
-    # Tentar carregar do arquivo .pkl primeiro (formato da calibração do OpenCV)
+def load_camera_calibration(
+    calib_mat="src/utils/src/intelbras_rael/calibration.mat",
+    calib_pkl="calibration.pkl",
+    calib_json="camera_calibration.json"
+):
+    """Carrega calibração de câmera.
+    Prioridade: MATLAB .mat > OpenCV .pkl > JSON.
+
+    O MATLAB (Computer Vision Toolbox) armazena a matriz intrínseca em formato
+    coluna-maior (transposta em relação ao OpenCV), por isso é necessário transpor K.
+    Os coeficientes de distorção do MATLAB são apenas radiais [k1, k2]; os
+    coeficientes tangenciais [p1, p2] são preenchidos com zero para o OpenCV.
+    """
+    # 1. Tentar carregar do arquivo MATLAB .mat
+    try:
+        if os.path.exists(calib_mat):
+            print("find calib.mat")
+            data = scipy.io.loadmat(calib_mat)
+            # MATLAB armazena K transposta: K_matlab = K_opencv.T
+            camera_matrix = data['K'].T.astype(np.float64)
+            # Distorção radial do MATLAB: [k1, k2] → OpenCV: [k1, k2, p1, p2]
+            k1, k2 = float(data['dist'][0, 0]), float(data['dist'][0, 1])
+            dist_coeffs = np.array([[k1, k2, 0.0, 0.0]], dtype=np.float64)
+            fx = float(data['fx'])
+            fy = float(data['fy'])
+            cx = float(data['cx'])
+            cy = float(data['cy'])
+            print(f"✅ Calibração MATLAB carregada: {calib_mat}")
+            print(f"   fx={fx:.2f}, fy={fy:.2f}, cx={cx:.2f}, cy={cy:.2f}")
+            print(f"   Distorção radial: k1={k1:.6f}, k2={k2:.6f}")
+            print(f"   Camera Matrix:\n{camera_matrix}")
+            return camera_matrix, dist_coeffs
+    except Exception as e:
+        print(f"⚠️  Não foi possível carregar calibração MATLAB .mat: {e}")
+
+    # 2. Fallback: arquivo .pkl (OpenCV)
     try:
         if os.path.exists(calib_pkl):
             with open(calib_pkl, 'rb') as f:
@@ -25,8 +59,8 @@ def load_camera_calibration(calib_pkl="calibracao/calibração/calibration.pkl",
             return camera_matrix, dist_coeffs
     except Exception as e:
         print(f"⚠️  Não foi possível carregar calibração PKL: {e}")
-    
-    # Fallback: tentar JSON
+
+    # 3. Fallback: JSON
     try:
         if os.path.exists(calib_json):
             with open(calib_json, 'r') as f:
@@ -37,7 +71,7 @@ def load_camera_calibration(calib_pkl="calibracao/calibração/calibration.pkl",
             return camera_matrix, dist_coeffs
     except Exception as e:
         print(f"⚠️  Calibração JSON não disponível: {e}")
-    
+
     print("❌ Nenhuma calibração encontrada. Tracking sem correção de distorção.")
     return None, None
 
@@ -62,6 +96,118 @@ def create_undistort_maps(camera_matrix, dist_coeffs, frame_size):
     print(f"   ROI (região de interesse): {roi}")
     
     return mapx, mapy, new_camera_matrix
+
+def marker_center_to_corners_world(center_xyz, marker_size):
+    """Retorna os 4 cantos 3D (TL, TR, BR, BL) de um ArUco no plano Z=0."""
+    cx, cy, cz = center_xyz
+    h = marker_size / 2.0
+    return np.array([
+        [cx - h, cy + h, cz],  # TL
+        [cx + h, cy + h, cz],  # TR
+        [cx + h, cy - h, cz],  # BR
+        [cx - h, cy - h, cz],  # BL
+    ], dtype=np.float32)
+
+def build_aruco_correspondences(corners, ids, marker_positions, marker_size):
+    """Monta correspondências 3D-2D para solvePnP usando múltiplos ArUcos."""
+    if ids is None:
+        return None, None, []
+
+    object_points = []
+    image_points = []
+    used_ids = []
+
+    for i, marker_id in enumerate(ids.flatten()):
+        if marker_id not in marker_positions:
+            continue
+        obj_corners = marker_center_to_corners_world(marker_positions[marker_id], marker_size)
+        img_corners = corners[i][0].astype(np.float32)
+        object_points.extend(obj_corners.tolist())
+        image_points.extend(img_corners.tolist())
+        used_ids.append(int(marker_id))
+
+    if len(object_points) < 4:
+        return None, None, used_ids
+
+    return np.array(object_points, dtype=np.float32), np.array(image_points, dtype=np.float32), used_ids
+
+def estimate_camera_pose_from_markers(corners, ids, camera_matrix, dist_coeffs, marker_positions, marker_size):
+    """Estima pose da câmera no mundo dos marcadores via solvePnPRansac."""
+    obj_pts, img_pts, used_ids = build_aruco_correspondences(
+        corners, ids, marker_positions, marker_size
+    )
+    if obj_pts is None:
+        return None, None, used_ids, None
+
+    try:
+        ok, rvec, tvec, inliers = cv2.solvePnPRansac(
+            obj_pts,
+            img_pts,
+            camera_matrix,
+            dist_coeffs,
+            flags=cv2.SOLVEPNP_ITERATIVE,
+            reprojectionError=3.0,
+            confidence=0.99,
+            iterationsCount=200,
+        )
+        if not ok:
+            return None, None, used_ids, None
+
+        # Erro médio de reprojeção (diagnóstico)
+        proj, _ = cv2.projectPoints(obj_pts, rvec, tvec, camera_matrix, dist_coeffs)
+        proj = proj.reshape(-1, 2)
+        err = float(np.mean(np.linalg.norm(proj - img_pts, axis=1)))
+        return rvec, tvec, used_ids, err
+    except Exception as e:
+        print(f"[POSE] Falha ao estimar pose: {e}")
+        return None, None, used_ids, None
+
+def pixel_to_world_on_plane(point_xy, camera_matrix, dist_coeffs, rvec, tvec, plane_z=0.0):
+    """Projeta pixel para ponto 3D no plano Z=plane_z do mundo."""
+    pts = np.array([[point_xy]], dtype=np.float32)
+    und = cv2.undistortPoints(pts, camera_matrix, dist_coeffs)
+    x_n, y_n = und[0, 0, 0], und[0, 0, 1]
+
+    # Raio na câmera (normalizado)
+    ray_cam = np.array([x_n, y_n, 1.0], dtype=np.float64)
+
+    R, _ = cv2.Rodrigues(rvec)
+    R_inv = R.T
+    t = tvec.reshape(3)
+
+    # Centro da câmera no mundo: C = -R^T t
+    cam_center_world = -R_inv @ t
+    # Direção do raio no mundo
+    ray_world = R_inv @ ray_cam
+
+    if abs(ray_world[2]) < 1e-8:
+        return None
+
+    s = (plane_z - cam_center_world[2]) / ray_world[2]
+    if s <= 0:
+        return None
+
+    p_world = cam_center_world + s * ray_world
+    return float(p_world[0]), float(p_world[1]), float(p_world[2])
+
+def fill_missing_points(points_xy):
+    """Preenche lacunas (NaN) por forward/backward fill para permitir suavização."""
+    if not points_xy:
+        return points_xy
+
+    arr = np.array(points_xy, dtype=np.float64)
+    valid = np.isfinite(arr[:, 0]) & np.isfinite(arr[:, 1])
+    if not np.any(valid):
+        return points_xy
+
+    first_valid = int(np.argmax(valid))
+    arr[:first_valid] = arr[first_valid]
+
+    for i in range(first_valid + 1, len(arr)):
+        if not (np.isfinite(arr[i, 0]) and np.isfinite(arr[i, 1])):
+            arr[i] = arr[i - 1]
+
+    return [tuple(v) for v in arr]
 
 # Função para calcular pose do marker e transformação
 def get_marker_pose_and_transform(marker_corners, use_cache=True, cache=None):
@@ -232,28 +378,28 @@ def smooth_trajectory(trajectory_points_relative, window_length=5, polyorder=2):
 # Capture Device
 
 #device = "rtsp://admin:nupedee7@192.168.0.108:554/tcp"
-device = "rtsp://admin:nupedee7@192.168.1.6:554/cam/realmonitor?channel=1&subtype=0&proto=Onvif"
+device = "rtsp://admin:nupedee7@192.168.1.4:554/cam/realmonitor?channel=1&subtype=0&proto=Onvif"
 # Open capture
 cap = cv2.VideoCapture(device)
 
-# Bola de Tênis 
-#lower_color = np.array([22, 62, 67])
-#upper_color = np.array([40, 162, 255])
 
-# Yellow disc
-#lower_color = np.array([24,76,145])
-#upper_color = np.array([36,162,187])
-
-# Purple disc
-lower_color = np.array([122,87,121])
-upper_color = np.array([134,228,227])
+lower_color = np.array([63, 75, 0])
+upper_color = np.array([83, 236, 255])
 
 # ArUco Marker parameters
 aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
 parameters = cv2.aruco.DetectorParameters()
 detector = cv2.aruco.ArucoDetector(aruco_dict, parameters)
-MARKER_ID = 0  # 4x4_50_0 (ID = 0)
+MARKER_ID = 0  # Mantido por compatibilidade (não é mais obrigatório)
 MARKER_SIZE = 0.15  # 15 cm
+
+# Mapa global dos ArUcos (referência no marker 0)
+MARKER_POSITIONS = {
+    0: (0.0, 0.0, 0.0),
+    1: (0.0, 1.9, 0.0),
+    2: (1.2, 1.9, 0.0),
+    3: (1.2, 0.0, 0.0),
+}
 
 # Carregar calibração de câmera
 camera_matrix_calib, dist_coeffs_calib = load_camera_calibration()
@@ -265,6 +411,7 @@ undistort_initialized = False
 # Lista para guardar os pontos do trajeto (coordenadas da câmera)
 trajectory_points = []
 trajectory_points_relative = []  # Coordenadas relativas ao marker
+trajectory_points_world = []     # Coordenadas globais (m) no referencial do marker 0
 trajectory_timestamps = []
 
 # Frame "canvas" onde será desenhado o trajeto
@@ -275,12 +422,16 @@ marker_origin_fixed = False  # Flag para fixar o marker na primeira detecção
 marker_pose_cache = None  # Cache da pose para não recalcular todo frame
 marker_detected_at_frame = None  # Frame onde o marker foi detectado (para ajuste retroativo)
 
+# Pose da câmera no mundo dos ArUcos (atualizada por frame)
+camera_rvec = None
+camera_tvec = None
+last_pose_error_px = None
+last_used_marker_ids = []
+
 while True:
     ret, frame = cap.read()
     if not ret:
         break
-
-    frame = cv2.resize(frame, (640, 480))
     
     # Inicializar mapas de retificação (uma vez apenas)
     if not undistort_initialized and camera_matrix_calib is not None:
@@ -302,60 +453,34 @@ while True:
 
     # Detectar marcador ArUco
     corners, ids, rejected = detector.detectMarkers(frame)
-    
-    if ids is not None and not marker_origin_fixed:
-        # Desenhar markers detectados
-        frame = cv2.aruco.drawDetectedMarkers(frame, corners, ids)
-        
-        # Procurar pelo marker com ID = 5 (apenas na primeira detecção)
-        for i, marker_id in enumerate(ids):
-            if marker_id[0] == MARKER_ID:
-                # Salvar os cantos do marker
-                marker_corners_fixed = corners[i][0]
-                marker_origin_fixed = True  # Fixar a origem
-                marker_detected_at_frame = len(trajectory_points)  # Frame atual
-                
-                marker_center = np.mean(marker_corners_fixed, axis=0).astype(int)
-                
-                # DEBUG: Imprimir cantos para entender a ordem
-                print(f"\n[DEBUG CANTOS]")
-                for idx, corner in enumerate(marker_corners_fixed):
-                    print(f"  Canto {idx}: {corner}")
-                print(f"  Centro: {marker_center}")
-                
-                # Calcular distâncias entre cantos
-                side1 = np.linalg.norm(marker_corners_fixed[1] - marker_corners_fixed[0])
-                side2 = np.linalg.norm(marker_corners_fixed[2] - marker_corners_fixed[1])
-                side3 = np.linalg.norm(marker_corners_fixed[3] - marker_corners_fixed[2])
-                side4 = np.linalg.norm(marker_corners_fixed[0] - marker_corners_fixed[3])
-                
-                print(f"  Lado 0->1: {side1:.1f}px, Lado 1->2: {side2:.1f}px")
-                print(f"  Lado 2->3: {side3:.1f}px, Lado 3->0: {side4:.1f}px")
-                print(f"  Tamanho esperado: {MARKER_SIZE*100:.1f}cm = {MARKER_SIZE:.4f}m")
-                
-                # Calcular pose para cache
-                marker_pose_cache = get_marker_pose_and_transform(marker_corners_fixed, use_cache=False)
-                center, axis_x_norm, axis_y_norm, px_per_meter = marker_pose_cache
-                print(f"[CALIBRAÇÃO] Escala: {px_per_meter:.1f} px/m ({MARKER_SIZE:.4f}m = ~{MARKER_SIZE*px_per_meter:.1f}px)")
-                print(f"[EIXOS] X normalizado: {axis_x_norm}, Y normalizado: {axis_y_norm}")
-                
-                # Se há pontos anteriores, ajustar retroativamente
-                if marker_detected_at_frame > 0:
-                    adjust_coordinates_retroactively(trajectory_points, trajectory_points_relative, marker_corners_fixed, marker_detected_at_frame)
 
-    
-    # Desenhar o marker na frame (se foi detectado)
-    if marker_origin_fixed and ids is not None:
+    # Pose da câmera via múltiplos marcadores conhecidos
+    if ids is not None:
         frame = cv2.aruco.drawDetectedMarkers(frame, corners, ids)
-        # Desenhar os eixos do marker
-        frame = draw_marker_axes(frame, marker_corners_fixed, scale=100, cache=marker_pose_cache)
-    elif marker_origin_fixed:
-        # Desenhar os eixos do marker mesmo se não foi detectado novamente
-        frame = draw_marker_axes(frame, marker_corners_fixed, scale=100, cache=marker_pose_cache)
-        # Adicionar um círculo no centro para debug
-        center = np.mean(marker_corners_fixed, axis=0).astype(int)
-        cv2.circle(frame, tuple(center), 8, (255, 255, 255), -1)
-        cv2.putText(frame, "Marker Fixed", tuple(center - 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+
+    pnp_camera_matrix = new_camera_matrix if new_camera_matrix is not None else camera_matrix_calib
+    pnp_dist_coeffs = np.zeros((1, 4), dtype=np.float64) if new_camera_matrix is not None else dist_coeffs_calib
+
+    if pnp_camera_matrix is not None:
+        rvec, tvec, used_ids, reproj_err = estimate_camera_pose_from_markers(
+            corners,
+            ids,
+            pnp_camera_matrix,
+            pnp_dist_coeffs,
+            MARKER_POSITIONS,
+            MARKER_SIZE,
+        )
+        if rvec is not None and tvec is not None:
+            camera_rvec, camera_tvec = rvec, tvec
+            last_pose_error_px = reproj_err
+            last_used_marker_ids = used_ids
+
+    # Overlay de diagnóstico da pose
+    if camera_rvec is not None:
+        info = f"Pose OK | IDs: {last_used_marker_ids} | err={last_pose_error_px:.2f}px" if last_pose_error_px is not None else "Pose OK"
+        cv2.putText(frame, info, (10, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+    else:
+        cv2.putText(frame, "Pose indisponivel (mostre >=1 ArUco conhecido)", (10, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 0, 255), 2)
 
     # Converter para HSV
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
@@ -387,13 +512,24 @@ while True:
                 trajectory_points.append((cx, cy))
                 trajectory_timestamps.append(time.time())
 
-                # Calcular coordenadas relativas ao marker (se foi detectado)
-                if marker_origin_fixed:
-                    # Transformar para coordenadas locais do marker
-                    local_coords = get_local_coords((cx, cy), marker_corners_fixed, cache=marker_pose_cache)
-                    trajectory_points_relative.append(local_coords)
+                # Coordenadas globais no plano Z=0 (referencial do marker 0)
+                world_point = None
+                if camera_rvec is not None and camera_tvec is not None and pnp_camera_matrix is not None:
+                    world_point = pixel_to_world_on_plane(
+                        (cx, cy),
+                        pnp_camera_matrix,
+                        pnp_dist_coeffs,
+                        camera_rvec,
+                        camera_tvec,
+                        plane_z=0.0,
+                    )
+
+                if world_point is not None:
+                    trajectory_points_world.append((world_point[0], world_point[1]))
+                    trajectory_points_relative.append((world_point[0], world_point[1]))
                 else:
-                    trajectory_points_relative.append((cx, cy))
+                    trajectory_points_world.append((np.nan, np.nan))
+                    trajectory_points_relative.append((np.nan, np.nan))
 
                 # Desenhar o ponto no canvas
                 cv2.circle(canvas, (cx, cy), 2, (0, 255, 0), -1)
@@ -411,40 +547,58 @@ while True:
         break
 
 # Ao final, salvar o canvas com o trajeto
-timestamp = int(time.time())
+#timestamp = int(time.time())
+timestamp = "ORB_0404_03"
 
 # 1. Salvar imagem com canvas do trajeto
-cv2.imwrite(f"trajeto_camera_{timestamp}.png", canvas)
-print(f"Trajeto salvo como trajeto_camera_{timestamp}.png")
+cv2.imwrite(f"trajetorias/trajeto_camera_{timestamp}.png", canvas)
+abs_path = os.path.abspath(f"trajetorias/trajeto_camera_{timestamp}.png")
+print(f"Trajeto salvo como trajeto_camera_{timestamp}.png\nCaminho absoluto: {abs_path}")
 
 # 2. Salvar CSV com coordenadas relativas ao marker ArUco
 os.makedirs("trajetorias", exist_ok=True)
 csv_filename = f"trajetorias/trajeto_aruco_markers_{timestamp}.csv"
 
 # Aplicar suavização à trajetória antes de salvar
-trajectory_points_relative_smoothed = smooth_trajectory(trajectory_points_relative, window_length=5, polyorder=2)
+trajectory_points_world_filled = fill_missing_points(trajectory_points_world)
+trajectory_points_relative_smoothed = smooth_trajectory(trajectory_points_world_filled, window_length=5, polyorder=2)
 
 with open(csv_filename, 'w', newline='') as csvfile:
     writer = csv.writer(csvfile)
-    writer.writerow(['timestamp', 'frame_x', 'frame_y', 'relative_x_m', 'relative_y_m', 'relative_x_smooth_m', 'relative_y_smooth_m', 'time_elapsed'])
+    writer.writerow([
+        'timestamp',
+        'frame_x',
+        'frame_y',
+        'world_x_m',
+        'world_y_m',
+        'world_x_smooth_m',
+        'world_y_smooth_m',
+        'time_elapsed',
+    ])
     
     start_time = trajectory_timestamps[0] if trajectory_timestamps else 0
     
-    for i, (point_cam, point_rel) in enumerate(zip(trajectory_points, trajectory_points_relative)):
+    for i, (point_cam, point_rel) in enumerate(zip(trajectory_points, trajectory_points_world)):
         elapsed_time = trajectory_timestamps[i] - start_time if i < len(trajectory_timestamps) else 0
         point_smooth = trajectory_points_relative_smoothed[i] if i < len(trajectory_points_relative_smoothed) else point_rel
+
+        rel_x = f"{point_rel[0]:.4f}" if np.isfinite(point_rel[0]) else ''
+        rel_y = f"{point_rel[1]:.4f}" if np.isfinite(point_rel[1]) else ''
+        sm_x = f"{point_smooth[0]:.4f}" if np.isfinite(point_smooth[0]) else ''
+        sm_y = f"{point_smooth[1]:.4f}" if np.isfinite(point_smooth[1]) else ''
+
         writer.writerow([
             trajectory_timestamps[i] if i < len(trajectory_timestamps) else '',
             point_cam[0],
             point_cam[1],
-            f"{point_rel[0]:.4f}",
-            f"{point_rel[1]:.4f}",
-            f"{point_smooth[0]:.4f}",
-            f"{point_smooth[1]:.4f}",
+            rel_x,
+            rel_y,
+            sm_x,
+            sm_y,
             f"{elapsed_time:.3f}"
         ])
-
-print(f"Coordenadas relativas ao marker salvas em: {csv_filename}")
+abs_path = os.path.abspath(f"trajetorias/trajeto_aruco_markers_{timestamp}.csv")
+print(f"Coordenadas relativas ao marker salvas em: {csv_filename}\nCaminho absoluto: {abs_path}")
 
 # 3. Gerar gráficos do tracking em arquivos separados
 if trajectory_points and last_frame is not None:
@@ -469,10 +623,10 @@ if trajectory_points and last_frame is not None:
     fig_cam.savefig(cam_plot_filename, dpi=150, bbox_inches='tight')
     print(f"Gráfico do tracking (câmera) salvo como: {cam_plot_filename}")
 
-    # Figura 2: Trajeto em coordenadas relativas ao marker
+    # Figura 2: Trajeto em coordenadas globais (m) pelo mapa dos ArUcos
     fig_rel, ax_rel = plt.subplots(1, 1, figsize=(7, 6))
-    rel_xs = [p[0] for p in trajectory_points_relative]
-    rel_ys = [p[1] for p in trajectory_points_relative]
+    rel_xs = [p[0] for p in trajectory_points_world_filled]
+    rel_ys = [p[1] for p in trajectory_points_world_filled]
     
     ax_rel.plot(rel_xs, rel_ys, 'g-', linewidth=1.5, label='Trajectory (Raw)', alpha=0.5)
     ax_rel.scatter(rel_xs, rel_ys, c='green', s=15, alpha=0.4)
@@ -482,18 +636,18 @@ if trajectory_points and last_frame is not None:
     ax_rel.plot(smooth_xs, smooth_ys, 'b-', linewidth=2.5, label='Trajectory (Smoothed)', alpha=0.9)
     ax_rel.scatter(smooth_xs, smooth_ys, c='blue', s=20, alpha=0.7)
     
-    ax_rel.scatter([0], [0], c='blue', s=100, marker='x', linewidth=3, label='Origin (Marker)')
+    ax_rel.scatter([0], [0], c='blue', s=100, marker='x', linewidth=3, label='Origin (Marker 0)')
     ax_rel.axhline(y=0, color='k', linestyle='-', alpha=0.3)
     ax_rel.axvline(x=0, color='k', linestyle='-', alpha=0.3)
     
-    ax_rel.set_title('Rastreamento em Coordenadas Relativas ao Marker (Raw vs Smoothed)')
-    ax_rel.set_xlabel('X relativo (metros)')
-    ax_rel.set_ylabel('Y relativo (metros)')
+    ax_rel.set_title('Rastreamento em Coordenadas Globais dos ArUcos (Raw vs Smoothed)')
+    ax_rel.set_xlabel('X global (metros)')
+    ax_rel.set_ylabel('Y global (metros)')
     ax_rel.legend()
     ax_rel.grid(True, alpha=0.3)
     ax_rel.set_aspect('equal')
     
-    rel_plot_filename = f"trajeto_tracking_relative_{timestamp}.png"
+    rel_plot_filename = f"trajetorias/trajeto_tracking_relative_{timestamp}.png"
     fig_rel.savefig(rel_plot_filename, dpi=150, bbox_inches='tight')
     print(f"Gráfico do tracking (relativo) salvo como: {rel_plot_filename}")
 

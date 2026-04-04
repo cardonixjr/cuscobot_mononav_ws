@@ -3,12 +3,13 @@ import os
 
 import matplotlib.pyplot as plt
 
-name_mod = "TESTEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE"
+timestamp = ""
 
 # Define paths
 base_path = "src/visual_core/results"
-vo_file = os.path.join(base_path, f"vo_scaled_trajectory-{name_mod}.csv")
-wheel_file = os.path.join(base_path, f"wheel_trajectory-{name_mod}.csv")
+ground_truth_path = os.path.join(base_path, f"ground_truth_trajectory-{timestamp}.csv")
+vo_file = os.path.join(base_path, f"vo_scaled_trajectory-{timestamp}.csv")
+wheel_file = os.path.join(base_path, f"wheel_trajectory-{timestamp}.csv")
 
 # Read CSV files
 vo_data = pd.read_csv(vo_file)

@@ -6,6 +6,7 @@ import numpy as np
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import Image, CameraInfo
 from cv_bridge import CvBridge
+from geometry_msgs.msg import Quaternion
 
 from VO.tools import plot_results, plot_results_3d, image_processing, save_csv
 
@@ -19,6 +20,9 @@ class VisualOdometry(object):
         rospy.Subscriber("/camera/image_raw", Image, self.image_callback)
         rospy.Subscriber("/camera/camera_info", CameraInfo, self.camera_info_callback)
         rospy.Subscriber("/odom", Odometry, self.odom_callback)
+
+        # Publisher
+        self.visual_odom_pub = rospy.Publisher("visual_odom", Odometry, queue_size=10)
 
         # Opencv camera config
         self.bridge = CvBridge()
@@ -185,6 +189,17 @@ class VisualOdometry(object):
             self.scaled_pose_list.append(hom_camera_pose * self.absscale)
             self.scaled_vo_odom.append(self.cur_pose[:3, 3] * self.absscale)
 
+            # Publish visual odometry
+            visual_odom = Odometry()
+            visual_odom.header.stamp = msg.header.stamp
+            visual_odom.header.frame_id = "odom"
+            visual_odom.child_frame_id = "base_link"
+            visual_odom.pose.pose.position.x = self.cur_pose[0, 3] * self.absscale
+            visual_odom.pose.pose.position.y = self.cur_pose[1, 3] * self.absscale
+            visual_odom.pose.pose.position.z = self.cur_pose[2, 3] * self.absscale
+            visual_odom.pose.pose.orientation = Quaternion(0, 0, 0, 1)
+            self.visual_odom_pub.publish(visual_odom)
+
         # Plota keypoints
         # if kpts:
         #     img_with_kpts = cv2.drawKeypoints(input_img, kpts, None, (0, 255, 0), cv2.MARKER_CROSS)
@@ -336,14 +351,14 @@ class VisualOdometry(object):
         return scale
 
     def spin(self):
-        name_mod = "ORB_0404_03"
+        # name_mod = "ORB_0404_03"
 
         rospy.spin()
-        save_csv(self.wheel_odom, self.scaled_vo_odom,name_modifier=name_mod) 
+        # save_csv(self.wheel_odom, self.scaled_vo_odom,name_modifier=name_mod) 
         # plot_results(self.wheel_odom, self.scaled_vo_odom, name_modifier=name_mod)
         # plot_pose(self.pose_list, self.camera_matrix)
         # plot_results_3d(self.wheel_odom, self.scaled_vo_odom, name_modifier=name_mod)
-        cv2.destroyAllWindows()
+        # cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":
@@ -353,5 +368,3 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         rospy.loginfo("Keyboard interrupted, shutting down.")
         pass
-    # finally:
-    #     node.save_on_shutdown()
