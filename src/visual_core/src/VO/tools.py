@@ -191,20 +191,20 @@ def plot_results_3d(wheel_odom, vo_odom, name_modifier=""):
 #    plt.show()
     
 
-def save_csv(wheel_odom, vo_odom, name_modifier=""):
+def save_csv(wheel_odom, vo_odom, name_modifier="", path = "src/utils/trajetorias/"):
     # Converter para listas de floats
     vo_odom_list = [list(map(float, v)) for v in vo_odom]
     wheel_odom_list = [list(map(float, w)) for w in wheel_odom]
 
     # salvar VO escalada
-    with open(f"vo_scaled_trajectory-{name_modifier}.csv", "w", newline="") as f:
+    with open(os.path.join(path, f"vo_scaled_trajectory-{name_modifier}.csv"), "w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["x","y","z"])
         w.writerows(vo_odom_list)
     print(f"[DEBUG] Saved vo_scaled_trajectory-{name_modifier}.csv")
     
     # salvar odom
-    with open(f"wheel_trajectory-{name_modifier}.csv", "w", newline="") as f:
+    with open(os.path.join(path, f"wheel_trajectory-{name_modifier}.csv"), "w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["x","y","z"])
         w.writerows(wheel_odom_list)

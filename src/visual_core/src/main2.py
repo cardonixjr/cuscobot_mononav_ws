@@ -22,6 +22,9 @@ class VisualOdometry(object):
         rospy.Subscriber("/camera/camera_info", CameraInfo, self.camera_info_callback)
         rospy.Subscriber("/odom", Odometry, self.odom_callback)
 
+        # Publishers
+        rospy.Publisher("/vo_odom", Odometry, queue_size=10)
+
         # Opencv camera config
         self.bridge = CvBridge()
         self.camera_matrix = None
@@ -188,11 +191,11 @@ class VisualOdometry(object):
             self.scaled_vo_odom.append(self.cur_pose[:3, 3] * self.absscale)
 
 
-        # if kpts:
-        #     img_with_kpts = cv2.drawKeypoints(input_img, kpts, None, (0, 255, 0), cv2.MARKER_CROSS)
-        #     cv2.imshow("Keypoints", img_with_kpts)
-        #     
-        # cv2.imshow("Processed Image", input_img)
+        if kpts:
+            img_with_kpts = cv2.drawKeypoints(input_img, kpts, None, (0, 255, 0), cv2.MARKER_CROSS)
+            cv2.imshow("Keypoints", img_with_kpts)
+            
+        cv2.imshow("Processed Image", input_img)
 
 
         self.cur_gt = self.wheel_odom[-1] if len(self.wheel_odom) >0 else None
@@ -333,11 +336,9 @@ class VisualOdometry(object):
         return [R1, t]
 
     def form_transf(self, R, t):
-        
         T = np.eye(4, dtype=np.float64)
         T[:3, :3] = R
         T[:3, 3] = t
-        
         return T
 
     def get_absscale(self):
@@ -353,7 +354,7 @@ class VisualOdometry(object):
         return scale
 
     def spin(self):
-        name_mod = "ORB_2602_01"
+        name_mod = "ORB_0404_01"
 
         rospy.spin()
         save_csv(self.wheel_odom, self.scaled_vo_odom,name_modifier=name_mod) 

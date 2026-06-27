@@ -3,22 +3,12 @@ import numpy as np
 
 # Capture Device
 
-#device = "rtsp://admin:nupedee7@192.168.0.108:554/tcp"
-device = "rtsp://admin:nupedee7@192.168.0.108:554/cam/realmonitor?channel=1&subtype=0&proto=Onvif"
+device = "rtsp://admin:nupedee7@192.168.1.4:554/cam/realmonitor?channel=1&subtype=0&proto=Onvif"
 # Open capture
 cap = cv2.VideoCapture(device)
 
-# Bola de Tênis 
-#lower_color = np.array([22, 62, 67])
-#upper_color = np.array([40, 162, 255])
-
-# Yellow disc
-#lower_color = np.array([24,76,145])
-#upper_color = np.array([36,162,187])
-
-# Purple disc
-lower_color = np.array([122,87,121])
-upper_color = np.array([134,228,227])
+lower_color = np.array([43, 116, 110])
+upper_color = np.array([78, 227, 255])
 
 
 # Lista para guardar os pontos do trajeto
