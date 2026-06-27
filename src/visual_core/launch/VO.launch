@@ -5,6 +5,6 @@
 	<node name="visual_odometry" pkg="visual_core" type="main2.py" output="screen" />
 
 	<!-- Starting Pose Reader -->
-	<node name="pose_reader" pkg="utils" type="pose_reader.py" output="screen" />
+	<!-- <node name="pose_reader" pkg="utils" type="pose_reader.py" output="screen" /> -->
 
 </launch>

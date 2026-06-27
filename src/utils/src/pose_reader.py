@@ -94,7 +94,8 @@ class PoseReader:
             rospy.spin()
         except KeyboardInterrupt:
             rospy.loginfo("Plotting trajectories...")
-            self.plot_trajectories()
+            #self.plot_trajectories()
+            self.save_trajectories()
 
 if __name__ == '__main__':
     reader = PoseReader()
