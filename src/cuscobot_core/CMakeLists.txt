@@ -10,13 +10,11 @@ project(cuscobot_core)
 find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   map_server
-  roscpp
   rospy
   rviz
   std_msgs
   tf2
   robot_state_publisher
-  amcl
   xacro
 )
 
@@ -165,11 +163,11 @@ include_directories(
 # See http://ros.org/doc/api/catkin/html/adv_user_guide/variables.html
 
 ## Mark executable scripts (Python etc.) for installation
-## in contrast to setup.py, you can choose the destination
-# catkin_install_python(PROGRAMS
-#   scripts/my_python_script
-#   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
+# in contrast to setup.py, you can choose the destination
+ catkin_install_python(PROGRAMS
+   src/deadReckoning.py
+   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+ )
 
 ## Mark executables for installation
 ## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_executables.html
