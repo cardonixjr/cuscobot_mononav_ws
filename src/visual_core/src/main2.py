@@ -4,15 +4,17 @@ import time
 import rospy
 import cv2
 import numpy as np
+import psutil
+import os
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import Image, CameraInfo
 from cv_bridge import CvBridge
 from geometry_msgs.msg import Quaternion
+from visual_core.msg import VOStatistics
 
 from VO.tools import plot_results, plot_results_3d, image_processing, save_csv
 
 class VisualOdometry(object):
-
     def __init__(self):
         # Initialize rospy
         rospy.init_node("visual_odom")
@@ -24,6 +26,7 @@ class VisualOdometry(object):
 
         # Publisher
         self.visual_odom_pub = rospy.Publisher("visual_odom", Odometry, queue_size=10)
+        self.statistics_pub = rospy.Publisher("vo_statistics", VOStatistics, queue_size=10)
 
         # Opencv camera config
         self.bridge = CvBridge()
@@ -141,14 +144,19 @@ class VisualOdometry(object):
             rospy.loginfo("Fail to receive image")
             return
         
+        t0 = time.perf_counter() # Tempo inicial do processo
+
         # Aplica o processamento de imagens
         img = self.bridge.imgmsg_to_cv2(msg, "bgr8")
         input_img = image_processing(img)
+        t1 = time.perf_counter() # Tempo de processamento da imagem
+
 
         # rospy.loginfo("Image received")
 
         # Aplica a detecção de keypoints no frame atual
         kpts, desc = self.detector.detectAndCompute(input_img, None)
+        t2 = time.perf_counter() # Tempo de detecção de keypoints
 
         scores = np.zeros((len(kpts)))
         for i, p in enumerate(kpts):
@@ -172,14 +180,17 @@ class VisualOdometry(object):
             self.cur_desc = desc
             self.cur_kpts = kpts
                
-            # Get Mathces
-            q1, q2, good = self.get_matches(input_img, ratio = self.distance_ratio)
+            # Get Matches
+            q1, q2, matches, good = self.get_matches(input_img, ratio = self.distance_ratio)
+            t3 = time.perf_counter() # Tempo de inferência dos matches
 
-            transformation = self.get_pose(q1, q2)
+            transformation, mask = self.get_pose(q1, q2)
 
             self.cur_pose = self.cur_pose @ transformation
             hom_array = np.array([[0,0,0,1]])
             hom_camera_pose = np.concatenate((self.cur_pose,hom_array), axis=0)
+
+            t4 = time.perf_counter() # Tempo de cálculo da pose
 
             # Acumula os resultados
             self.pose_list.append(hom_camera_pose)
@@ -189,6 +200,7 @@ class VisualOdometry(object):
 
             self.scaled_pose_list.append(hom_camera_pose * self.absscale)
             self.scaled_vo_odom.append(self.cur_pose[:3, 3] * self.absscale)
+
 
             # Publish visual odometry
             visual_odom = Odometry()
@@ -201,12 +213,43 @@ class VisualOdometry(object):
             visual_odom.pose.pose.orientation = Quaternion(0, 0, 0, 1)
             self.visual_odom_pub.publish(visual_odom)
 
-        # Plota keypoints
-        # if kpts:
-        #     img_with_kpts = cv2.drawKeypoints(input_img, kpts, None, (0, 255, 0), cv2.MARKER_CROSS)
-        #     cv2.imshow("Keypoints", img_with_kpts)
-        #     
-        # cv2.imshow("Processed Image", input_img)
+
+            # Get environment statistics
+            cpu = psutil.cpu_percent()
+            ram = psutil.virtual_memory().percent
+            temp = os.popen("vcgencmd measure_temp").read()
+            fps = 1.0 / (t4 - t0)
+            n_kpts = len(self.cur_kpts)
+            n_matches = len(matches) if matches is not None else 0
+            n_good_matches = len(good) if good is not None else 0
+            inliners = np.count_nonzero(mask) if mask is not None else 0
+            match_ratio = n_good_matches / n_matches if n_matches > 0 else 0
+            inline_ratio = inliners / len(n_good_matches) if n_good_matches > 0 else 0
+            processing_time = t1 - t0
+            detection_time = t2 - t1
+            matching_time = t3 - t2
+            pose_estimation_time = t4 - t3
+            
+
+            # Publish statistics
+            status = VOStatistics()
+            status.header.stamp = time.time()
+            status.preprocessing_time = processing_time
+            status.detection_time = detection_time
+            status.matching_time = matching_time
+            status.pose_estimation_time = pose_estimation_time
+            status.fps = fps
+            status.detected_keypoints = n_kpts
+            status.raw_matches = n_matches
+            status.good_matches = n_good_matches
+            status.inliners = inliners
+            status.match_ratio = match_ratio
+            status.inline_ratio = inline_ratio
+            status.cpu_usage = cpu
+            status.memory_usage = ram
+            status.cpu_temperature = temp
+            status.tracking_ok = len(n_good_matches) > 15
+            self.statistics_pub.publish(status)
 
 
         self.cur_gt = self.wheel_odom[-1] if len(self.wheel_odom) >0 else None
@@ -242,7 +285,7 @@ class VisualOdometry(object):
                 q1 = np.float32([self.last_kpts[m.queryIdx].pt for m in good_matches])
                 q2 = np.float32([self.cur_kpts[m.trainIdx].pt for m in good_matches])
 
-                return q1, q2, good_matches
+                return q1, q2, matches, good_matches
             else:
                 return None, None, None
 
@@ -264,7 +307,7 @@ class VisualOdometry(object):
 
         T = self.form_transf(R_base, np.squeeze(t_base))
 
-        return T
+        return T, mask
 
     def decomp_essential_mat_old(self, E, q1, q2):
         def sum_z_cal_relative_scale(R, t):
