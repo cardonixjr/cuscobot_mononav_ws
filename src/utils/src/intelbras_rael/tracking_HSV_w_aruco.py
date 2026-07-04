@@ -548,7 +548,7 @@ while True:
 
 # Ao final, salvar o canvas com o trajeto
 timestamp = int(time.time())
-name_mod = "2706_ORB_02"
+name_mod = "0407_ORB_04"
 
 # 1. Salvar imagem com canvas do trajeto
 cv2.imwrite(f"/home/luciano/cuscobot_mononav_ws/src/utils/src/trajetorias/ground_truth_{name_mod}.png", canvas)

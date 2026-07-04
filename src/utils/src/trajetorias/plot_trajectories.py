@@ -7,11 +7,11 @@ import matplotlib.pyplot as plt
 dir_path = os.path.dirname(os.path.abspath(__file__))
 trajectory_dir = os.path.join(dir_path, "trajetorias")
 
-dif = "2706_ORB_02"
+dif = "0407_ORB_04"
 
-vo_files = f"/home/luciano/cuscobot_mononav_ws/src/utils/src/trajetorias/visual_odom_trajectory_{dif}.csv"
-wheel_files = f"/home/luciano/cuscobot_mononav_ws/src/utils/src/trajetorias/odom_trajectory_{dif}.csv"
-gt_file = f"/home/luciano/cuscobot_mononav_ws/src/utils/src/trajetorias/trajeto_aruco_markers_{dif}.csv"
+vo_files = f"/home/luciano/cuscobot_mononav_ws/trajetorias/visual_odom_trajectory_{dif}.csv"
+wheel_files = f"/home/luciano/cuscobot_mononav_ws/trajetorias/odom_trajectory_{dif}.csv"
+gt_file = f"/home/luciano/cuscobot_mononav_ws/src/utils/src/intelbras_rael/trajetorias/ground_truth_{dif}.csv"
 
 plt.figure(figsize=(10, 8))
 
@@ -25,10 +25,10 @@ plt.plot(df_wheel['x'], df_wheel['y'], linestyle='--', label=f'Wheel: {os.path.b
 
 # Plotar trajetórias e ground truth
 df_gt = pd.read_csv(gt_file)
-offset_x = df_gt['world_x_smooth_m'][0]
-offset_y = -df_gt['world_y_smooth_m'][0]
+offset_x = df_gt['world_x_m'][0]
+offset_y = -df_gt['world_y_m'][0]
 
-plt.plot(df_gt['world_y_smooth_m'] + offset_y, -df_gt['world_x_smooth_m'] + offset_x, color='black', label='Ground Truth')
+plt.plot(df_gt['world_y_m'] + offset_y, -df_gt['world_x_m'] + offset_x, color='black', label='Ground Truth')
 
 plt.xlabel('X')
 plt.ylabel('Y')

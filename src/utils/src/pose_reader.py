@@ -3,14 +3,18 @@ from nav_msgs.msg import Odometry
 import numpy as np
 from threading import Lock
 import time
-
+import re
 
 import matplotlib.pyplot as plt
+
+from std_msgs.msg import String
+import json
 
 class PoseReader:
     def __init__(self):
         rospy.init_node('pose_reader')
         
+        self.vo_statistics = []
         self.odom_positions = []
         self.visual_odom_positions = []
         self.lock = Lock()
@@ -18,6 +22,7 @@ class PoseReader:
         # Subscribe to topics
         rospy.Subscriber('/odom', Odometry, self.odom_callback)
         rospy.Subscriber('/visual_odom', Odometry, self.visual_odom_callback)
+        rospy.Subscriber('/vo_statistics', String, self.statistics_callback)
         
         rospy.on_shutdown(self.shutdown_callback)
         
@@ -28,9 +33,42 @@ class PoseReader:
         self.save_trajectories()
         # self.plot_trajectories()
 
+    def statistics_callback(self, msg):
+        with self.lock:
+
+            stats = json.loads(msg.data)
+
+            self.vo_statistics.append([
+
+                stats["timestamp"],
+
+                stats["preprocessing_time"],
+                stats["detection_time"],
+                stats["matching_time"],
+                stats["pose_estimation_time"],
+
+                stats["fps"],
+
+                stats["detected_keypoints"],
+                stats["raw_matches"],
+                stats["good_matches"],
+                stats["inliners"],
+
+                stats["match_ratio"],
+                stats["inliner_ratio"],
+
+                stats["cpu_usage"],
+                stats["memory_usage"],
+                float(re.sub(r'[^\d.]', '', stats["cpu_temperature"])),
+
+                int(stats["tracking_ok"])
+
+            ])
+
+
     def odom_callback(self, msg):
         with self.lock:
-            t = time.time()
+            t = msg.header.stamp.to_sec()
             x = msg.pose.pose.position.x
             y = msg.pose.pose.position.y
             z = msg.pose.pose.position.z
@@ -38,7 +76,7 @@ class PoseReader:
 
     def visual_odom_callback(self, msg):
         with self.lock:
-            t = time.time()
+            t = msg.header.stamp.to_sec()
             x = msg.pose.pose.position.x
             y = msg.pose.pose.position.y
             z = msg.pose.pose.position.z
@@ -92,13 +130,44 @@ class PoseReader:
     def save_trajectories(self):
         # Save trajectories to CSV
         # timestamp = int(time.time())
-        timestamp = "2706_ORB_02"
+        timestamp = "0407_ORB_04"
         # Save trajectories to CSV
         odom_array = np.array(self.odom_positions)
         visual_array = np.array(self.visual_odom_positions)
         np.savetxt(f'trajetorias/odom_trajectory_{timestamp}.csv', odom_array, delimiter=',', header='timestamp,x,y,z', comments='')
         np.savetxt(f'trajetorias/visual_odom_trajectory_{timestamp}.csv', visual_array, delimiter=',', header='timestamp,x,y,z', comments='')
-    
+        
+
+        #for i, value in enumerate(self.vo_statistics[-1]):
+        #    print(i, value, type(value))    
+
+        stats_array = np.array(self.vo_statistics)
+        np.savetxt(
+            f"trajetorias/vo_statistics_{timestamp}.csv",
+            stats_array,
+            delimiter=",",
+            header=(
+                "timestamp,"
+                "preprocessing_time,"
+                "detection_time,"
+                "matching_time,"
+                "pose_estimation_time,"
+                "fps,"
+                "detected_keypoints,"
+                "raw_matches,"
+                "good_matches,"
+                "inliners,"
+                "match_ratio,"
+                "inliner_ratio,"
+                "cpu_usage,"
+                "memory_usage,"
+                "cpu_temperature,"
+                "tracking_ok"
+            ),
+            comments=""
+        )
+
+
     def run(self):
         rospy.spin()
 
