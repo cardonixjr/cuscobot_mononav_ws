@@ -22,8 +22,8 @@
     <joint name="camera_optical_joint" type="fixed">
         <parent link="camera_link"/>
         <child link="camera_optical_link"/>
-        <origin xyz="0 0 0" rpy="0 0 0"/>
-        <!-- <origin xyz="0 0 0" rpy="${-half_pi_const} 0 ${-half_pi_const}"/> -->
+        <!-- <origin xyz="0 0 0" rpy="0 0 0"/> -->
+        <origin xyz="0 0 0" rpy="${-half_pi_const} 0 ${-half_pi_const}"/>
     </joint>
 
     <link name="camera_optical_link"></link>

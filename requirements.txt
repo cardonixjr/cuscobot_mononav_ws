@@ -5,3 +5,4 @@ ultralytics==8.4.0
 opencv-python~=4.13.0
 PyYAML>=4.2b1
 tqdm~=4.47.0
+scipy

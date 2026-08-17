@@ -199,7 +199,7 @@ def save_csv(wheel_odom, vo_odom, name_modifier=""):
     print(f"[DEBUG] Saved wheel_trajectory-{name_modifier}.csv")
 
 if __name__ == "__main__":
-    cap = cv2.VideoCapture(2)
+    cap = cv2.VideoCapture(0)
 
     while True:
         ret, frame = cap.read()

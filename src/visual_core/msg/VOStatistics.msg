@@ -11,10 +11,10 @@ float32 fps
 uint32 detected_keypoints
 uint32 raw_matches
 uint32 good_matches
-uint32 inliers
+uint32 inliners
 
 float32 match_ratio
-float32 inlier_ratio
+float32 inliner_ratio
 
 float32 cpu_usage
 float32 memory_usage

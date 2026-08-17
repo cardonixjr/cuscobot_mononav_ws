@@ -10,12 +10,30 @@ project(cuscobot_core)
 find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   map_server
+  rosserial
+  roscpp
   rospy
   rviz
   std_msgs
   tf2
   robot_state_publisher
+  amcl
   xacro
+)
+
+catkin_package(
+  CATKIN_DEPENDS
+    geometry_msgs
+    map_server
+    rosserial
+    roscpp
+    rospy
+    rviz
+    std_msgs
+    tf2
+    robot_state_publisher
+    amcl
+    xacro
 )
 
 ## System dependencies are found with CMake's conventions
@@ -107,12 +125,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## LIBRARIES: libraries you create in this project that dependent projects also need
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
-catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES cuscobot_core
-#  CATKIN_DEPENDS geometry_msgs map_server robot_description roscpp rospy rviz std_msgs tf2 xacro
-#  DEPENDS system_lib
-)
+
 
 ###########
 ## Build ##
@@ -164,10 +177,13 @@ include_directories(
 
 ## Mark executable scripts (Python etc.) for installation
 # in contrast to setup.py, you can choose the destination
- catkin_install_python(PROGRAMS
-   src/deadReckoning.py
-   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
- )
+# catkin_install_python(PROGRAMS
+#   src/deadReckoning.py
+#   src/encoder.py
+#   src/odom_utls.py
+#   src/PRESETS.py
+#   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+# )
 
 ## Mark executables for installation
 ## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_executables.html
@@ -184,11 +200,14 @@ include_directories(
 # )
 
 ## Mark cpp header files for installation
-# install(DIRECTORY include/${PROJECT_NAME}/
-#   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-#   FILES_MATCHING PATTERN "*.h"
-#   PATTERN ".svn" EXCLUDE
-# )
+install(DIRECTORY
+  launch
+  param
+  maps
+  urdf
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+  OPTIONAL
+)
 
 ## Mark other files for installation (e.g. launch and bag files, etc.)
 # install(FILES

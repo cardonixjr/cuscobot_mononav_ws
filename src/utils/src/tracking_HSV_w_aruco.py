@@ -1,3 +1,9 @@
+"""
+COMMON HSV TRACKING WITH INTELBRAS CAMERA AND ARUCO MARKERS
+THIS CODE DOES NOT CORRECT PARALAXE DISTORTIONS
+"""
+
+
 import cv2
 import numpy as np
 import time
@@ -14,9 +20,9 @@ MARKER_SIZE = 0.144
 
 # Carregar calibração de câmera (se disponível)
 def load_camera_calibration(
-    calib_mat="src/utils/src/intelbras_rael/calibration.mat",
-    calib_pkl="calibration.pkl",
-    calib_json="camera_calibration.json"
+    calib_mat="./calibration.mat",
+    calib_pkl="./calibration.pkl",
+    calib_json="./camera_calibration.json"
 ):
     """Carrega calibração de câmera.
     Prioridade: MATLAB .mat > OpenCV .pkl > JSON.
@@ -547,17 +553,17 @@ while True:
         break
 
 # Ao final, salvar o canvas com o trajeto
-#timestamp = int(time.time())
-timestamp = "ORB_0404_03"
+timestamp = int(time.time())
+name_mod = "0407_ORB_04"
 
 # 1. Salvar imagem com canvas do trajeto
-cv2.imwrite(f"trajetorias/trajeto_camera_{timestamp}.png", canvas)
-abs_path = os.path.abspath(f"trajetorias/trajeto_camera_{timestamp}.png")
-print(f"Trajeto salvo como trajeto_camera_{timestamp}.png\nCaminho absoluto: {abs_path}")
+cv2.imwrite(f"/home/luciano/cuscobot_mononav_ws/src/utils/src/trajetorias/ground_truth_{name_mod}.png", canvas)
+abs_path = os.path.abspath(f"ground_truth_{name_mod}.png")
+print(f"Trajeto salvo como ground_truth_{name_mod}.png\nCaminho absoluto: {abs_path}")
 
 # 2. Salvar CSV com coordenadas relativas ao marker ArUco
 os.makedirs("trajetorias", exist_ok=True)
-csv_filename = f"trajetorias/trajeto_aruco_markers_{timestamp}.csv"
+csv_filename = f"/home/luciano/cuscobot_mononav_ws/src/utils/src/trajetorias/trajeto_aruco_markers_{name_mod}.csv"
 
 # Aplicar suavização à trajetória antes de salvar
 trajectory_points_world_filled = fill_missing_points(trajectory_points_world)
@@ -597,7 +603,7 @@ with open(csv_filename, 'w', newline='') as csvfile:
             sm_y,
             f"{elapsed_time:.3f}"
         ])
-abs_path = os.path.abspath(f"trajetorias/trajeto_aruco_markers_{timestamp}.csv")
+abs_path = os.path.abspath(f"trajeto_aruco_markers_{name_mod}.csv")
 print(f"Coordenadas relativas ao marker salvas em: {csv_filename}\nCaminho absoluto: {abs_path}")
 
 # 3. Gerar gráficos do tracking em arquivos separados
@@ -619,7 +625,7 @@ if trajectory_points and last_frame is not None:
     ax_cam.legend()
     ax_cam.grid(True, alpha=0.3)
     
-    cam_plot_filename = f"trajeto_tracking_camera_{timestamp}.png"
+    cam_plot_filename = f"/home/luciano/cuscobot_mononav_ws/src/utils/src/trajetorias/trajeto_tracking_camera_{name_mod}.png"
     fig_cam.savefig(cam_plot_filename, dpi=150, bbox_inches='tight')
     print(f"Gráfico do tracking (câmera) salvo como: {cam_plot_filename}")
 
@@ -646,8 +652,8 @@ if trajectory_points and last_frame is not None:
     ax_rel.legend()
     ax_rel.grid(True, alpha=0.3)
     ax_rel.set_aspect('equal')
-    
-    rel_plot_filename = f"trajetorias/trajeto_tracking_relative_{timestamp}.png"
+
+    rel_plot_filename = f"/home/luciano/cuscobot_mononav_ws/src/utils/src/trajetorias/trajeto_tracking_relative_{name_mod}.png"
     fig_rel.savefig(rel_plot_filename, dpi=150, bbox_inches='tight')
     print(f"Gráfico do tracking (relativo) salvo como: {rel_plot_filename}")
 

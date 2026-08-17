@@ -1,4 +1,8 @@
-#finding hsv range of target object(pen)
+"""
+FIND HSV THRESHOLD VALUES
+"""
+
+
 import cv2
 import numpy as np
 import time
@@ -6,7 +10,8 @@ import time
 def nothing(x):
     pass
 
-device = "rtsp://admin:nupedee7@192.168.0.108:554/cam/realmonitor?channel=1&subtype=0&proto=Onvif"
+#device = "rtsp://admin:nupedee7@192.168.0.108:554/cam/realmonitor?channel=1&subtype=0&proto=Onvif"
+device = "rtsp://admin:nupedee7@192.168.1.4:554/cam/realmonitor?channel=1&subtype=0&proto=Onvif"
 # Initializing the webcam feed.
 cap = cv2.VideoCapture(device)
 cap.set(3,1280)
