@@ -10,7 +10,6 @@ project(cuscobot_core)
 find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   map_server
-  rosserial
   roscpp
   rospy
   rviz
@@ -25,7 +24,6 @@ catkin_package(
   CATKIN_DEPENDS
     geometry_msgs
     map_server
-    rosserial
     roscpp
     rospy
     rviz

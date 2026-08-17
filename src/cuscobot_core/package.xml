@@ -30,9 +30,9 @@
 
   <!-- The *depend tags are used to specify dependencies -->
   <!-- Dependencies can be catkin packages or system dependencies -->
+  <buildtool_depend>catkin</buildtool_depend>
   <depend>geometry_msgs</depend>
   <depend>map_server</depend>
-  <depend>rosserial</depend>
   <depend>roscpp</depend>
   <depend>rospy</depend>
   <depend>rviz</depend>
